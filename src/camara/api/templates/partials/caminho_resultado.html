@@ -1,0 +1,49 @@
+{% if not caminho %}
+<div class="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center text-slate-400">
+  Nenhum caminho por coautoria encontrado entre os dois deputados (até 6 saltos).
+</div>
+{% else %}
+<div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
+    <div class="bg-slate-950/70 border border-slate-800 rounded-lg p-3">
+      <div class="text-xs text-slate-400">Distância por coautoria</div>
+      <div class="text-lg font-bold text-emerald-400 mt-0.5">{{ caminho|length - 1 }} passo(s)</div>
+    </div>
+    <div class="bg-slate-950/70 border border-slate-800 rounded-lg p-3">
+      <div class="text-xs text-slate-400">Projetos assinados juntos</div>
+      <div class="text-lg font-bold text-white mt-0.5">{{ comparacao.projetosEmComum }}</div>
+    </div>
+    <div class="bg-slate-950/70 border border-slate-800 rounded-lg p-3">
+      <div class="text-xs text-slate-400">Concordância em votações</div>
+      <div class="text-lg font-bold text-sky-400 mt-0.5">
+        {% if comparacao.concordancia is not none %}{{ comparacao.concordancia|pct }} <span class="text-xs font-normal text-slate-400">({{ comparacao.votacoesEmComum }} votações)</span>{% else %}—{% endif %}
+      </div>
+    </div>
+  </div>
+  <p class="text-xs text-slate-400">
+    <strong>Para que serve:</strong> revela quando deputados de partidos aparentemente opostos assinam projetos juntos (1 passo) ou quem faz a ponte entre eles, comparado com o quanto realmente votam igual em plenário.
+  </p>
+  <div class="flex flex-wrap items-center gap-3">
+    {% for d in caminho %}
+    <a href="/ui/deputado/{{ d.id }}"
+       class="flex items-center gap-2.5 bg-slate-950 border border-slate-800 hover:border-emerald-500/60 rounded-xl p-3 transition">
+      <img src="{{ d.urlFoto or '' }}" alt="{{ d.nome }}"
+           onerror="this.src='https://www.camara.leg.br/tema/assets/images/foto-deputado-ausente.png'"
+           class="w-12 h-14 rounded-lg object-cover bg-slate-800" />
+      <div>
+        <div class="font-semibold text-sm text-white">{{ d.nome }}</div>
+        <div class="flex items-center gap-1.5 text-xs text-slate-400 mt-0.5">
+          {% if d.uf and url_bandeira_uf(d.uf) %}
+          <img src="{{ url_bandeira_uf(d.uf) }}" alt="{{ d.uf }}" class="w-4 h-3 rounded-sm object-cover" />
+          {% endif %}
+          <span>{{ d.uf }}</span> · <span>{{ d.partidos|join(', ') }}</span>
+        </div>
+      </div>
+    </a>
+    {% if not loop.last %}
+    <span class="text-emerald-400 font-bold text-lg">→</span>
+    {% endif %}
+    {% endfor %}
+  </div>
+</div>
+{% endif %}

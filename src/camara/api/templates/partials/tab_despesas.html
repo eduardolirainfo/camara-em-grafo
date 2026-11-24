@@ -1,0 +1,102 @@
+<div class="space-y-5">
+  <!-- Seletor de Ano -->
+  <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-xl p-4">
+    <div>
+      <h2 class="font-semibold text-white">Cota para o Exercício da Atividade Parlamentar (CEAP) — {{ ano }}</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Dados oficiais da API da Câmara com cache local. {{ despesas.quantidade_notas }} lançamento(s) no ano.</p>
+    </div>
+    <div class="flex items-center gap-2">
+      {% for y in ANOS_DISPONIVEIS %}
+      <button hx-get="/ui/deputado/{{ dep_id }}/tab/despesas?ano={{ y }}"
+              hx-target="#tab-conteudo"
+              hx-indicator="#tab-loading"
+              class="px-3 py-1.5 rounded-lg text-xs font-medium {% if y == ano %}bg-emerald-600 text-white{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}">
+        {{ y }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  {% if erro %}
+  <div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl p-4 text-sm">{{ erro }}</div>
+  {% endif %}
+
+  <!-- Total + Categorias + Fornecedores -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-center">
+      <div class="text-xs text-slate-400">Total líquido registrado em {{ ano }}</div>
+      <div class="text-3xl font-bold text-emerald-400 mt-1">{{ despesas.total|brl }}</div>
+      <div class="text-xs text-slate-500 mt-2">
+        Para salário, auxílio-moradia e verba de gabinete consolidada, consulte também o
+        <a href="https://www.camara.leg.br/deputados/{{ dep_id }}/verba-gabinete" target="_blank" class="text-sky-400 hover:underline">portal oficial da Câmara ↗</a>.
+      </div>
+    </div>
+
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 lg:col-span-2">
+      <h3 class="text-sm font-semibold text-white mb-3">Gastos por Categoria</h3>
+      {% if not despesas.categorias %}
+      <p class="text-xs text-slate-400">Nenhuma despesa registrada neste ano.</p>
+      {% else %}
+      <div class="space-y-2.5">
+        {% for cat in despesas.categorias %}
+        <div>
+          <div class="flex justify-between text-xs mb-1">
+            <span class="text-slate-300 truncate pr-2">{{ cat.tipo }}</span>
+            <span class="text-white font-medium shrink-0">{{ cat.valor|brl }} ({{ cat.percentual }}%)</span>
+          </div>
+          <div class="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+            <div class="h-full bg-emerald-500 rounded-full" style="width: {{ cat.percentual }}%"></div>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if despesas.top_fornecedores %}
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+    <h3 class="text-sm font-semibold text-white mb-3">Top 10 Fornecedores em {{ ano }}</h3>
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+      {% for f in despesas.top_fornecedores %}
+      <div class="flex justify-between bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2">
+        <span class="text-slate-300 truncate pr-2">{{ f.fornecedor }}</span>
+        <span class="text-emerald-400 font-semibold shrink-0">{{ f.valor|brl }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  {% if despesas.itens %}
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-x-auto">
+    <h3 class="text-sm font-semibold text-white mb-3">Notas e Lançamentos Recentes (até 100 itens)</h3>
+    <table class="w-full text-left text-xs">
+      <thead class="text-slate-400 border-b border-slate-800">
+        <tr>
+          <th class="py-2 pr-3">Data</th>
+          <th class="py-2 pr-3">Tipo de Despesa</th>
+          <th class="py-2 pr-3">Fornecedor</th>
+          <th class="py-2 pr-3 text-right">Valor Líquido</th>
+          <th class="py-2 text-right">Nota</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-slate-800/70 text-slate-300">
+        {% for item in despesas.itens %}
+        <tr>
+          <td class="py-2 pr-3 whitespace-nowrap">{{ item.dataDocumento or (item.mes ~ '/' ~ item.ano) }}</td>
+          <td class="py-2 pr-3">{{ item.tipoDespesa }}</td>
+          <td class="py-2 pr-3">{{ item.nomeFornecedor }}</td>
+          <td class="py-2 pr-3 text-right font-medium text-white whitespace-nowrap">{{ item.valorLiquido|brl }}</td>
+          <td class="py-2 text-right whitespace-nowrap">
+            {% if item.urlDocumento %}
+            <a href="{{ item.urlDocumento }}" target="_blank" class="text-sky-400 hover:underline">PDF ↗</a>
+            {% else %}—{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>

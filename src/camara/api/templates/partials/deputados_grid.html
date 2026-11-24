@@ -1,0 +1,103 @@
+<div class="flex items-center justify-between text-xs text-slate-400 mb-3">
+  <span>Mostrando <strong class="text-white">{{ deputados|length }}</strong> de <strong class="text-white">{{ total_filtrado }}</strong> deputados encontrados</span>
+  {% if total_filtrado > limit %}
+  <span>Página {{ (offset // limit) + 1 }} de {{ ((total_filtrado - 1) // limit) + 1 }}</span>
+  {% endif %}
+</div>
+
+{% if not deputados %}
+<div class="bg-slate-900 border border-slate-800 rounded-xl p-8 text-center text-slate-400">
+  Nenhum deputado encontrado com os filtros selecionados.
+</div>
+{% else %}
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+  {% for d in deputados %}
+  <a href="/ui/deputado/{{ d.id }}"
+     class="group bg-slate-900 border border-slate-800 hover:border-emerald-500/60 rounded-xl p-4 flex flex-col gap-3 transition">
+    <div class="flex items-start gap-3">
+      <img src="{{ d.urlFoto or '' }}" alt="{{ d.nome }}" loading="lazy"
+           onerror="this.src='https://www.camara.leg.br/tema/assets/images/foto-deputado-ausente.png'"
+           class="w-16 h-20 rounded-lg object-cover bg-slate-800 border border-slate-700 shrink-0" />
+      <div class="min-w-0 flex-1">
+        <h3 class="font-semibold text-white group-hover:text-emerald-400 truncate transition">{{ d.nome }}</h3>
+
+        <!-- UF com bandeira -->
+        <div class="flex items-center gap-1.5 mt-1 text-xs text-slate-300">
+          {% if d.uf and url_bandeira_uf(d.uf) %}
+          <img src="{{ url_bandeira_uf(d.uf) }}" alt="Bandeira {{ d.uf }}"
+               onerror="this.style.display='none'"
+               class="w-5 h-3.5 rounded-sm object-cover border border-slate-700" />
+          {% endif %}
+          <span>{{ d.uf or '—' }}</span>
+          {% if d.comunidadeVoto is not none %}
+          {% set grp = mapa_grupos.get(d.comunidadeVoto) %}
+          <span title="Grupo formado automaticamente pela semelhança de votos em plenário: {{ grp.rotulo if grp else 'Grupo ' ~ d.comunidadeVoto }}"
+                class="ml-auto px-1.5 py-0.5 rounded text-[10px] font-medium
+            {% if grp and grp.numero == 1 %}bg-amber-500/15 text-amber-300 border border-amber-500/30
+            {% elif grp and grp.numero == 2 %}bg-rose-500/15 text-rose-300 border border-rose-500/30
+            {% elif grp and grp.numero == 3 %}bg-sky-500/15 text-sky-300 border border-sky-500/30
+            {% else %}bg-slate-800 text-slate-300{% endif %}">
+            {% if grp %}Grupo {{ grp.numero }}{% else %}Grupo {{ d.comunidadeVoto }}{% endif %}
+          </span>
+          {% endif %}
+        </div>
+
+        <!-- Partidos com logos oficiais -->
+        <div class="flex flex-wrap items-center gap-1.5 mt-2">
+          {% for sigla in d.partidos %}
+          <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[11px] font-medium text-slate-200">
+            <img src="{{ url_logo_partido(sigla) }}" alt="{{ sigla }}" loading="lazy"
+                 onerror="this.style.display='none'"
+                 class="w-4 h-4 object-contain rounded-sm bg-white p-0.5" />
+            {{ sigla }}
+          </span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Métricas rápidas do grafo -->
+    <div class="grid grid-cols-3 gap-1.5 pt-2.5 border-t border-slate-800/80 text-center text-[11px]">
+      <div class="bg-slate-950/60 rounded-lg py-1" title="Percentual de votações nominais em que o deputado registrou voto">
+        <div class="text-slate-500">Presença</div>
+        <div class="font-semibold {% if (d.taxaPresenca or 0) < 0.4 %}text-rose-400{% else %}text-slate-200{% endif %}">
+          {{ d.taxaPresenca|pct }}
+        </div>
+      </div>
+      <div class="bg-slate-950/60 rounded-lg py-1" title="Percentual de votos contra a orientação do próprio partido">
+        <div class="text-slate-500">Contra Part.</div>
+        <div class="font-semibold {% if (d.taxaDivergencia or 0) >= 0.3 %}text-amber-400{% else %}text-slate-200{% endif %}">
+          {{ d.taxaDivergencia|pct }}
+        </div>
+      </div>
+      <div class="bg-slate-950/60 rounded-lg py-1" title="Quantidade de partidos pelos quais passou na 57ª legislatura">
+        <div class="text-slate-500">Partidos</div>
+        <div class="font-semibold {% if (d.numPartidos or 0) >= 3 %}text-amber-400{% else %}text-slate-200{% endif %}">
+          {{ d.numPartidos or (d.partidos|length) }}
+        </div>
+      </div>
+    </div>
+  </a>
+  {% endfor %}
+</div>
+
+<!-- Paginação HTMX -->
+{% if total_filtrado > limit %}
+<div class="flex items-center justify-center gap-3 mt-6">
+  {% if offset > 0 %}
+  <button hx-get="/ui/partials/deputados?busca={{ busca|urlencode }}&uf={{ uf }}&partido={{ partido }}&comunidade={{ comunidade }}&ordenar={{ ordenar }}&offset={{ [0, offset - limit]|max }}&limit={{ limit }}"
+          hx-target="#deputados-container"
+          class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-sm text-white">
+    ← Anterior
+  </button>
+  {% endif %}
+  {% if offset + limit < total_filtrado %}
+  <button hx-get="/ui/partials/deputados?busca={{ busca|urlencode }}&uf={{ uf }}&partido={{ partido }}&comunidade={{ comunidade }}&ordenar={{ ordenar }}&offset={{ offset + limit }}&limit={{ limit }}"
+          hx-target="#deputados-container"
+          class="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-sm text-white font-medium">
+    Próxima →
+  </button>
+  {% endif %}
+</div>
+{% endif %}
+{% endif %}

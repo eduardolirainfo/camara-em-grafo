@@ -1,0 +1,37 @@
+{% if not proposicoes %}
+<div class="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center text-slate-400">
+  Nenhuma proposição encontrada para os filtros informados.
+</div>
+{% else %}
+<div class="space-y-3">
+  {% for p in proposicoes %}
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+      <div class="flex items-center gap-2">
+        <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
+          {{ p.siglaTipo }} {{ p.numero }}/{{ p.ano }}
+        </span>
+        {% for t in p.temas %}
+        <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-xs">{{ t.nome }}</span>
+        {% endfor %}
+      </div>
+      <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ p.id }}"
+         target="_blank" class="text-xs text-sky-400 hover:underline">
+        Fonte oficial ↗
+      </a>
+    </div>
+    <p class="text-sm text-slate-200 leading-relaxed">{{ p.ementa }}</p>
+    {% if p.autores %}
+    <div class="flex flex-wrap items-center gap-1.5 mt-2.5 text-xs text-slate-400">
+      <span>Autores:</span>
+      {% for a in p.autores %}
+      <a href="/ui/deputado/{{ a.id }}" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">
+        {{ a.nome }} ({{ a.uf }})
+      </a>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% endif %}

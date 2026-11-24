@@ -1,0 +1,66 @@
+<div class="space-y-5">
+  {% if erro %}
+  <div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl p-4 text-sm">{{ erro }}</div>
+  {% endif %}
+
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+    <!-- Comissões e Órgãos -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <h2 class="font-semibold text-white mb-3">Comissões e Órgãos ({{ atuacao.orgaos|length }})</h2>
+      {% if not atuacao.orgaos %}
+      <p class="text-xs text-slate-400">Sem registros recentes.</p>
+      {% else %}
+      <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+        {% for o in atuacao.orgaos %}
+        <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3 text-xs">
+          <div class="flex justify-between gap-2">
+            <span class="font-semibold text-emerald-300">{{ o.siglaOrgao }}</span>
+            <span class="text-slate-400">{{ o.titulo }}</span>
+          </div>
+          <div class="text-slate-200 mt-0.5">{{ o.nomeOrgao }}</div>
+          <div class="text-slate-500 mt-1">{{ o.dataInicio or '' }}{% if o.dataFim %} até {{ o.dataFim }}{% else %} (atual){% endif %}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Frentes Parlamentares -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <h2 class="font-semibold text-white mb-3">Frentes Parlamentares ({{ atuacao.frentes|length }})</h2>
+      {% if not atuacao.frentes %}
+      <p class="text-xs text-slate-400">Nenhuma frente parlamentar registrada.</p>
+      {% else %}
+      <div class="space-y-1.5 max-h-96 overflow-y-auto pr-1 text-xs">
+        {% for f in atuacao.frentes[:60] %}
+        <div class="flex items-center justify-between gap-2 bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2">
+          <span class="text-slate-200">{{ f.titulo }}</span>
+          <a href="https://www.camara.leg.br/internet/deputado/frenteDetalhe.asp?id={{ f.id }}"
+             target="_blank" class="text-sky-400 hover:underline shrink-0">↗</a>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Discursos Recentes -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+    <h2 class="font-semibold text-white mb-3">Discursos Recentes em Plenário ({{ atuacao.discursos|length }})</h2>
+    {% if not atuacao.discursos %}
+    <p class="text-xs text-slate-400">Sem discursos recentes registrados na API.</p>
+    {% else %}
+    <div class="space-y-3">
+      {% for disc in atuacao.discursos[:10] %}
+      <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3 text-xs">
+        <div class="flex flex-wrap justify-between gap-2 text-slate-400 mb-1">
+          <span class="font-semibold text-sky-300">{{ disc.tipoDiscurso or 'Discurso' }}</span>
+          <span>{{ disc.dataHoraInicio or '' }}</span>
+        </div>
+        <p class="text-slate-200 leading-relaxed">{{ disc.sumario or (disc.transcricao[:350] ~ '...') if disc.transcricao else 'Sem sumário disponível.' }}</p>
+      </div>
+      {% endfor %}
+    </div>
+    {% endif %}
+  </div>
+</div>

@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Câmara em Grafo — Explorador da 57ª Legislatura{% endblock %}
+
+{% block content %}
+<!-- KPIs do Grafo -->
+<section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+    <div class="text-xs text-slate-400">Deputados (57ª Leg.)</div>
+    <div class="text-2xl font-bold text-white mt-0.5">{{ resumo.nos.get("Deputado", 0) }}</div>
+  </div>
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+    <div class="text-xs text-slate-400">Partidos</div>
+    <div class="text-2xl font-bold text-white mt-0.5">{{ resumo.nos.get("Partido", 0) }}</div>
+  </div>
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+    <div class="text-xs text-slate-400">Projetos de Lei e PECs</div>
+    <div class="text-2xl font-bold text-emerald-400 mt-0.5">{{ resumo.nos.get("Proposicao", 0) }}</div>
+  </div>
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+    <div class="text-xs text-slate-400">Votações Nominais</div>
+    <div class="text-2xl font-bold text-sky-400 mt-0.5">{{ resumo.nos.get("Votacao", 0) }}</div>
+  </div>
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+    <div class="text-xs text-slate-400">Votos Registrados</div>
+    <div class="text-2xl font-bold text-amber-400 mt-0.5">{{ resumo.relacoes.get("VOTOU", 0) }}</div>
+  </div>
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+    <div class="text-xs text-slate-400">Pares com Voto Parecido</div>
+    <div class="text-2xl font-bold text-violet-400 mt-0.5">{{ resumo.relacoes.get("VOTA_COMO", 0) }}</div>
+  </div>
+</section>
+
+<!-- Abas de Ferramentas -->
+<div class="flex flex-wrap gap-2 mb-5 border-b border-slate-800 pb-3">
+  <button type="button" onclick="mostrarPainel('deputados')" id="btn-deputados"
+    class="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white">
+    Deputados &amp; Fichas Completas
+  </button>
+  <button type="button" onclick="mostrarPainel('proposicoes')" id="btn-proposicoes"
+    class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700">
+    Buscar Projetos por Assunto
+  </button>
+  <button type="button" onclick="mostrarPainel('caminho')" id="btn-caminho"
+    class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700">
+    Conexão entre Deputados
+  </button>
+</div>
+
+<!-- Painel 1: Deputados -->
+<section id="painel-deputados">
+  <form id="filtros-deputados"
+        hx-get="/ui/partials/deputados"
+        hx-target="#deputados-container"
+        hx-trigger="submit, change from:select, keyup changed delay:300ms from:input[name='busca']"
+        hx-indicator="#loading-deps"
+        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+    <div class="lg:col-span-2">
+      <label class="block text-xs text-slate-400 mb-1">Buscar por nome</label>
+      <input type="text" name="busca" placeholder="Ex.: Silva, Maria, Delegado..."
+             class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Estado (UF)</label>
+      <select name="uf" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+        <option value="">Todas as 27 UFs</option>
+        {% for sigla, info in ufs %}
+        <option value="{{ sigla }}">{{ sigla }} — {{ info.nome }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Partido</label>
+      <select name="partido" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+        <option value="">Todos ({{ resumo.partidos|length }})</option>
+        {% for p in resumo.partidos %}
+        <option value="{{ p.sigla }}">{{ p.sigla }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1" title="Grupos formados automaticamente por quem vota de forma parecida em plenário (independente do partido)">
+        Grupo de Votação (?)
+      </label>
+      <select name="comunidade" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+        <option value="">Todos os grupos</option>
+        {% for c in resumo.comunidades %}
+        <option value="{{ c.id }}">{{ c.rotulo }} · {{ c.total }} deputados</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Ordenar por</label>
+      <select name="ordenar" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+        <option value="nome">Nome (A–Z)</option>
+        <option value="divergencia">Mais contra o próprio partido (%)</option>
+        <option value="presenca_asc">Menor presença em votações (%)</option>
+        <option value="presenca_desc">Maior presença em votações (%)</option>
+        <option value="trocas">Mais trocas de partido</option>
+        <option value="pagerank">Mais conectado em projetos</option>
+        <option value="betweenness">Articulador entre grupos</option>
+      </select>
+    </div>
+  </form>
+
+  <div id="loading-deps" class="htmx-indicator items-center gap-2 text-sm text-emerald-400 mb-3">
+    <span>Carregando deputados...</span>
+  </div>
+
+  <div id="deputados-container">
+    {% include "partials/deputados_grid.html" %}
+  </div>
+</section>
+
+<!-- Painel 2: Busca Fulltext de Proposições -->
+<section id="painel-proposicoes" class="hidden">
+  <form hx-get="/ui/partials/proposicoes"
+        hx-target="#proposicoes-resultado"
+        hx-indicator="#loading-props"
+        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+    <div class="lg:col-span-2">
+      <label class="block text-xs text-slate-400 mb-1">Palavra-chave no texto do projeto</label>
+      <input type="text" name="texto" placeholder="Ex.: inteligência artificial, saúde, educação..."
+             class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Tema (contém)</label>
+      <input type="text" name="tema" placeholder="Ex.: Saúde, Segurança..."
+             class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Tipo / Ano</label>
+      <div class="flex gap-2">
+        <select name="tipo" class="w-1/2 rounded-lg bg-slate-950 border border-slate-700 px-2 py-2 text-sm text-white">
+          <option value="">Tipo</option>
+          <option value="PL">PL</option>
+          <option value="PLP">PLP</option>
+          <option value="PEC">PEC</option>
+          <option value="PDL">PDL</option>
+          <option value="PRC">PRC</option>
+        </select>
+        <select name="ano" class="w-1/2 rounded-lg bg-slate-950 border border-slate-700 px-2 py-2 text-sm text-white">
+          <option value="">Ano</option>
+          {% for y in ANOS_DISPONIVEIS %}
+          <option value="{{ y }}">{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+    </div>
+    <div class="flex items-end">
+      <button type="submit" class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 text-sm transition">
+        Pesquisar
+      </button>
+    </div>
+  </form>
+  <div id="loading-props" class="htmx-indicator text-sm text-emerald-400 mb-3">Pesquisando proposições...</div>
+  <div id="proposicoes-resultado" class="text-sm text-slate-400">
+    Digite um termo ou escolha um filtro acima para buscar nas 26.796 proposições carregadas.
+  </div>
+</section>
+
+<!-- Painel 3: Menor Caminho por Coautoria -->
+<section id="painel-caminho" class="hidden">
+  <form hx-get="/ui/partials/caminho"
+        hx-target="#caminho-resultado"
+        hx-indicator="#loading-caminho"
+        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Deputado A</label>
+      <select name="deputado_a" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white">
+        {% for d in todos_deps %}
+        <option value="{{ d.id }}" {% if d.id == 220593 %}selected{% endif %}>{{ d.nome }} ({{ d.partidos|join('/') }} - {{ d.uf }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Deputado B</label>
+      <select name="deputado_b" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white">
+        {% for d in todos_deps %}
+        <option value="{{ d.id }}" {% if d.id == 204501 %}selected{% endif %}>{{ d.nome }} ({{ d.partidos|join('/') }} - {{ d.uf }})</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="flex items-end">
+      <button type="submit" class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 text-sm transition">
+        Descobrir Conexão
+      </button>
+    </div>
+  </form>
+  <div id="loading-caminho" class="htmx-indicator text-sm text-emerald-400 mb-3">Calculando ligação entre os deputados...</div>
+  <div id="caminho-resultado" class="text-sm text-slate-400">
+    Escolha dois deputados para descobrir o menor caminho de coautoria entre eles no grafo.
+  </div>
+</section>
+
+<script>
+function mostrarPainel(nome) {
+  ['deputados', 'proposicoes', 'caminho'].forEach(p => {
+    document.getElementById('painel-' + p).classList.toggle('hidden', p !== nome);
+    const btn = document.getElementById('btn-' + p);
+    if (p === nome) {
+      btn.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white';
+    } else {
+      btn.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700';
+    }
+  });
+}
+</script>
+{% endblock %}
