@@ -111,11 +111,16 @@ class _FakeFichaService(FichaDeputadoService):
             "ultimoStatus": {"situacao": "Exercício", "gabinete": {"predio": "4", "sala": "301"}},
         }
 
-    async def obter_despesas(self, dep_id: int, ano: int) -> dict[str, Any]:
+    async def obter_despesas(
+        self, dep_id: int, ano: int, mes: int | None = None
+    ) -> dict[str, Any]:
         return {
             "ano": ano,
+            "mes": mes,
             "quantidade_notas": 2,
             "total": 1500.50,
+            "total_ano": 1500.50,
+            "mensal": [{"mes": 1, "sigla": "JAN", "valor": 1500.50}],
             "categorias": [{"tipo": "DIVULGAÇÃO", "valor": 1500.50, "percentual": 100.0}],
             "top_fornecedores": [{"fornecedor": "Gráfica X", "valor": 1500.50}],
             "itens": [],

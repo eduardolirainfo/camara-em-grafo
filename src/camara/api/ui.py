@@ -269,24 +269,35 @@ def criar_ui_router(
         request: Request,
         dep_id: int,
         ano: int = Query(default=2025, ge=2000, le=2100),
+        mes: str | None = None,
     ) -> HTMLResponse:
+        mes_int = int(mes) if mes and mes.strip().isdigit() and 1 <= int(mes) <= 12 else None
         erro: str | None = None
         despesas: dict[str, Any] = {
             "ano": ano,
+            "mes": mes_int,
             "quantidade_notas": 0,
             "total": 0.0,
+            "total_ano": 0.0,
+            "mensal": [],
             "categorias": [],
             "top_fornecedores": [],
             "itens": [],
         }
         try:
-            despesas = await ficha_service.obter_despesas(dep_id, ano)
+            despesas = await ficha_service.obter_despesas(dep_id, ano, mes=mes_int)
         except _API_ERROS:
             erro = "Falha temporária ao consultar despesas CEAP na API da Câmara."
         return templates.TemplateResponse(
             request=request,
             name="partials/tab_despesas.html",
-            context={"despesas": despesas, "dep_id": dep_id, "ano": ano, "erro": erro},
+            context={
+                "despesas": despesas,
+                "dep_id": dep_id,
+                "ano": ano,
+                "mes": mes_int,
+                "erro": erro,
+            },
         )
 
     @router.get("/deputado/{dep_id}/tab/funcionarios", response_class=HTMLResponse)

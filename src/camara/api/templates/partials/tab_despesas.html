@@ -1,17 +1,38 @@
 <div class="space-y-5">
-  <!-- Seletor de Ano -->
-  <div class="flex flex-wrap items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <div>
-      <h2 class="font-semibold text-white">Cota para o Exercício da Atividade Parlamentar (CEAP) — {{ ano }}</h2>
-      <p class="text-xs text-slate-400 mt-0.5">Dados oficiais da API da Câmara com cache local. {{ despesas.quantidade_notas }} lançamento(s) no ano.</p>
+  <!-- Seletor de Ano e Mês -->
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <h2 class="font-semibold text-white">Cota Parlamentar (CEAP) — {{ ano }}{% if mes %} · Mês {{ "%02d"|format(mes) }}{% endif %}</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Dados oficiais da API da Câmara com cache local. {{ despesas.quantidade_notas }} lançamento(s) exibido(s).</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5">
+        {% for y in ANOS_DISPONIVEIS %}
+        <button hx-get="/ui/deputado/{{ dep_id }}/tab/despesas?ano={{ y }}"
+                hx-target="#tab-conteudo"
+                hx-indicator="#tab-loading"
+                class="px-3 py-1.5 rounded-lg text-xs font-medium {% if y == ano %}bg-emerald-600 text-white{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}">
+          {{ y }}
+        </button>
+        {% endfor %}
+      </div>
     </div>
-    <div class="flex items-center gap-2">
-      {% for y in ANOS_DISPONIVEIS %}
-      <button hx-get="/ui/deputado/{{ dep_id }}/tab/despesas?ano={{ y }}"
+
+    <!-- Filtro rápido por Mês -->
+    <div class="flex flex-wrap items-center gap-1.5 pt-2 border-t border-slate-800/80">
+      <span class="text-xs text-slate-500 mr-1">Mês:</span>
+      <button hx-get="/ui/deputado/{{ dep_id }}/tab/despesas?ano={{ ano }}"
               hx-target="#tab-conteudo"
               hx-indicator="#tab-loading"
-              class="px-3 py-1.5 rounded-lg text-xs font-medium {% if y == ano %}bg-emerald-600 text-white{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}">
-        {{ y }}
+              class="px-2.5 py-1 rounded text-[11px] font-medium {% if not mes %}bg-sky-600 text-white{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}">
+        Todos
+      </button>
+      {% for m in despesas.mensal %}
+      <button hx-get="/ui/deputado/{{ dep_id }}/tab/despesas?ano={{ ano }}&mes={{ m.mes }}"
+              hx-target="#tab-conteudo"
+              hx-indicator="#tab-loading"
+              class="px-2 py-1 rounded text-[11px] font-medium {% if mes == m.mes %}bg-sky-600 text-white{% else %}bg-slate-800 text-slate-300 hover:bg-slate-700{% endif %}">
+        {{ m.sigla }}
       </button>
       {% endfor %}
     </div>
@@ -21,21 +42,105 @@
   <div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl p-4 text-sm">{{ erro }}</div>
   {% endif %}
 
-  <!-- Total + Categorias + Fornecedores -->
+  <!-- Gráficos: Gasto Mensal (Barras) + Distribuição por Categoria (Rosca) -->
+  {% if despesas.mensal %}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col justify-center">
-      <div class="text-xs text-slate-400">Total líquido registrado em {{ ano }}</div>
-      <div class="text-3xl font-bold text-emerald-400 mt-1">{{ despesas.total|brl }}</div>
-      <div class="text-xs text-slate-500 mt-2">
-        Para salário, auxílio-moradia e verba de gabinete consolidada, consulte também o
-        <a href="https://www.camara.leg.br/deputados/{{ dep_id }}/verba-gabinete" target="_blank" class="text-sky-400 hover:underline">portal oficial da Câmara ↗</a>.
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 lg:col-span-2">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-white">Gasto Mensal em {{ ano }} (R$)</h3>
+        <span class="text-xs text-slate-400">Total no ano: <strong class="text-emerald-400">{{ despesas.total_ano|brl }}</strong></span>
+      </div>
+      <div class="h-60">
+        <canvas id="grafico-mensal-{{ dep_id }}-{{ ano }}"></canvas>
       </div>
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 lg:col-span-2">
-      <h3 class="text-sm font-semibold text-white mb-3">Gastos por Categoria</h3>
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col">
+      <h3 class="text-sm font-semibold text-white mb-2">Divisão por Categoria</h3>
+      <div class="text-xs text-slate-400 mb-2">
+        Total no filtro: <strong class="text-emerald-400">{{ despesas.total|brl }}</strong>
+      </div>
+      <div class="h-52 flex-1">
+        <canvas id="grafico-cat-{{ dep_id }}-{{ ano }}"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    if (typeof Chart === 'undefined') return;
+    const mensal = {{ despesas.mensal | tojson }};
+    const mesSelecionado = {{ mes | tojson }};
+    const fmtBRL = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    const ctxBar = document.getElementById('grafico-mensal-{{ dep_id }}-{{ ano }}');
+    if (ctxBar) {
+      new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: mensal.map(m => m.sigla),
+          datasets: [{
+            label: 'Gasto mensal',
+            data: mensal.map(m => m.valor),
+            backgroundColor: mensal.map(m => (mesSelecionado && m.mes === mesSelecionado) ? '#f59e0b' : '#10b981'),
+            borderRadius: 6
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => fmtBRL(ctx.raw) } }
+          },
+          scales: {
+            x: { ticks: { color: '#94a3b8' }, grid: { display: false } },
+            y: {
+              ticks: {
+                color: '#94a3b8',
+                callback: (v) => v >= 1000 ? 'R$ ' + (v / 1000).toFixed(0) + ' mil' : 'R$ ' + v
+              },
+              grid: { color: '#1e293b' }
+            }
+          }
+        }
+      });
+    }
+
+    const cats = {{ despesas.categorias[:6] | tojson }};
+    const ctxPie = document.getElementById('grafico-cat-{{ dep_id }}-{{ ano }}');
+    if (ctxPie && cats.length > 0) {
+      new Chart(ctxPie, {
+        type: 'doughnut',
+        data: {
+          labels: cats.map(c => c.tipo.length > 26 ? c.tipo.slice(0, 26) + '…' : c.tipo),
+          datasets: [{
+            data: cats.map(c => c.valor),
+            backgroundColor: ['#10b981', '#0ea5e9', '#f59e0b', '#8b5cf6', '#f43f5e', '#64748b'],
+            borderColor: '#0f172a',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { color: '#cbd5e1', boxWidth: 10, font: { size: 10 } } },
+            tooltip: { callbacks: { label: (ctx) => ctx.label + ': ' + fmtBRL(ctx.raw) } }
+          }
+        }
+      });
+    }
+  })();
+  </script>
+  {% endif %}
+
+  <!-- Resumo por categoria + Fornecedores -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <h3 class="text-sm font-semibold text-white mb-3">Detalhamento por Categoria</h3>
       {% if not despesas.categorias %}
-      <p class="text-xs text-slate-400">Nenhuma despesa registrada neste ano.</p>
+      <p class="text-xs text-slate-400">Nenhuma despesa registrada neste período.</p>
       {% else %}
       <div class="space-y-2.5">
         {% for cat in despesas.categorias %}
@@ -52,25 +157,27 @@
       </div>
       {% endif %}
     </div>
-  </div>
 
-  {% if despesas.top_fornecedores %}
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <h3 class="text-sm font-semibold text-white mb-3">Top 10 Fornecedores em {{ ano }}</h3>
-    <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-      {% for f in despesas.top_fornecedores %}
-      <div class="flex justify-between bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2">
-        <span class="text-slate-300 truncate pr-2">{{ f.fornecedor }}</span>
-        <span class="text-emerald-400 font-semibold shrink-0">{{ f.valor|brl }}</span>
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+      <h3 class="text-sm font-semibold text-white mb-3">Top 10 Fornecedores no Período</h3>
+      {% if not despesas.top_fornecedores %}
+      <p class="text-xs text-slate-400">Nenhum fornecedor no período selecionado.</p>
+      {% else %}
+      <div class="space-y-2 text-xs">
+        {% for f in despesas.top_fornecedores %}
+        <div class="flex justify-between bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2">
+          <span class="text-slate-300 truncate pr-2">{{ f.fornecedor }}</span>
+          <span class="text-emerald-400 font-semibold shrink-0">{{ f.valor|brl }}</span>
+        </div>
+        {% endfor %}
       </div>
-      {% endfor %}
+      {% endif %}
     </div>
   </div>
-  {% endif %}
 
   {% if despesas.itens %}
   <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 overflow-x-auto">
-    <h3 class="text-sm font-semibold text-white mb-3">Notas e Lançamentos Recentes (até 100 itens)</h3>
+    <h3 class="text-sm font-semibold text-white mb-3">Notas Fiscais e Lançamentos (até 100 itens)</h3>
     <table class="w-full text-left text-xs">
       <thead class="text-slate-400 border-b border-slate-800">
         <tr>
@@ -84,7 +191,7 @@
       <tbody class="divide-y divide-slate-800/70 text-slate-300">
         {% for item in despesas.itens %}
         <tr>
-          <td class="py-2 pr-3 whitespace-nowrap">{{ item.dataDocumento or (item.mes ~ '/' ~ item.ano) }}</td>
+          <td class="py-2 pr-3 whitespace-nowrap">{{ item.dataDocumento|data_br if item.dataDocumento else (item.mes ~ '/' ~ item.ano) }}</td>
           <td class="py-2 pr-3">{{ item.tipoDespesa }}</td>
           <td class="py-2 pr-3">{{ item.nomeFornecedor }}</td>
           <td class="py-2 pr-3 text-right font-medium text-white whitespace-nowrap">{{ item.valorLiquido|brl }}</td>

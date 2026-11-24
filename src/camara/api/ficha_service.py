@@ -111,14 +111,33 @@ class FichaDeputadoService:
                 "urlInteiroTeor": dados.get("urlInteiroTeor") or "",
             }
 
-    async def obter_despesas(self, dep_id: int, ano: int) -> dict[str, Any]:
-        """Retorna despesas CEAP de um deputado em um ano, agregadas por categoria e fornecedor."""
+    async def obter_despesas(
+        self, dep_id: int, ano: int, mes: int | None = None
+    ) -> dict[str, Any]:
+        """Retorna despesas CEAP de um deputado em um ano, com série mensal, categorias e filtro por mês."""
         async with self._criar_cliente() as client:
-            itens = await client.get_paginated(
+            itens_ano = await client.get_paginated(
                 f"/deputados/{dep_id}/despesas",
                 params={"ano": ano, "ordem": "DESC", "ordenarPor": "dataDocumento"},
                 itens=100,
             )
+
+        siglas_mes = [
+            "JAN", "FEV", "MAR", "ABR", "MAI", "JUN",
+            "JUL", "AGO", "SET", "OUT", "NOV", "DEZ",
+        ]
+        totais_mes: dict[int, float] = {m: 0.0 for m in range(1, 13)}
+        for d in itens_ano:
+            m = int(d.get("mes") or 0)
+            if 1 <= m <= 12:
+                totais_mes[m] += float(d.get("valorLiquido") or d.get("valorDocumento") or 0.0)
+
+        mensal = [
+            {"mes": m, "sigla": siglas_mes[m - 1], "valor": round(totais_mes[m], 2)}
+            for m in range(1, 13)
+        ]
+
+        itens = [d for d in itens_ano if mes is None or int(d.get("mes") or 0) == mes]
 
         total = 0.0
         por_tipo: dict[str, float] = defaultdict(float)
@@ -152,8 +171,11 @@ class FichaDeputadoService:
 
         return {
             "ano": ano,
+            "mes": mes,
             "quantidade_notas": len(itens),
             "total": round(total, 2),
+            "total_ano": round(sum(totais_mes.values()), 2),
+            "mensal": mensal,
             "categorias": categorias,
             "top_fornecedores": top_fornecedores,
             "itens": itens[:100],
