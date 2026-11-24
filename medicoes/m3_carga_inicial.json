@@ -1,0 +1,74 @@
+{
+  "legislatura_id": 57,
+  "anos": [
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "votacoes_lidas_csv": 44204,
+  "votacoes_nominais_carregadas": 1613,
+  "votos_lidos_csv": 478001,
+  "votos_vinculados": 477114,
+  "votos_ignorados_fora_legislatura": 0,
+  "orientacoes_lidas_csv": 15755,
+  "orientacoes_vinculadas": 10820,
+  "orientacoes_ignoradas_vazias": 2238,
+  "orientacoes_ignoradas_nao_partido": 6495,
+  "objetos_vinculados_sobre": 879,
+  "vota_como": {
+    "legislatura_id": 57,
+    "anos": [
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "minimo_votacoes": 20,
+    "deputados_com_votos": 644,
+    "votacoes_consideradas": 1613,
+    "pares_criados": 193670,
+    "tempo_calculo_segundos": 1.1823,
+    "tempo_gravacao_segundos": 65.7974,
+    "tempo_total_segundos": 107.5973
+  },
+  "contra_orientacao": {
+    "legislatura_id": 57,
+    "anos": [
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "relacoes_criadas": 424,
+    "tempo_segundos": 6.5147
+  },
+  "nos_por_rotulo": {
+    "Deputado": 648,
+    "Legislatura": 1,
+    "Partido": 26,
+    "Proposicao": 26796,
+    "Tema": 32,
+    "UF": 27,
+    "Votacao": 1613
+  },
+  "relacoes_por_tipo": {
+    "AUTOR_DE": 44122,
+    "COAUTOR_COM": 157536,
+    "CONTRA_ORIENTACAO": 424,
+    "EXERCE_MANDATO_EM": 648,
+    "FILIADO_A": 855,
+    "ORIENTOU": 10820,
+    "REPRESENTA": 648,
+    "SOBRE": 879,
+    "TRATA_DE": 58883,
+    "VOTA_COMO": 193670,
+    "VOTOU": 477114
+  },
+  "tempo_carga_segundos": 128.5014,
+  "tempo_total_segundos": 243.6604,
+  "total_nos": 29143,
+  "total_relacoes": 945599,
+  "downloads_rede": 4,
+  "hits_cache": 12
+}

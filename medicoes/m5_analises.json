@@ -1,0 +1,583 @@
+{
+  "legislatura_id": 57,
+  "parametros": {
+    "min_votacoes_comum": 50,
+    "min_concordancia": 0.7,
+    "min_coautorias": 5,
+    "top_k_temas": 5,
+    "min_similaridade_temas": 0.5
+  },
+  "comunidades_louvain": {
+    "nos_projetados": 626,
+    "relacoes_projetadas": 194088,
+    "community_count": 3,
+    "modularity": 0.2167,
+    "compute_millis": 24476,
+    "write_millis": 66,
+    "blocos": [
+      {
+        "comunidade": 497,
+        "tamanho": 279,
+        "topPartidos": [
+          {
+            "deputados": 64,
+            "partido": "UNIÃO"
+          },
+          {
+            "deputados": 62,
+            "partido": "REPUBLICANOS"
+          },
+          {
+            "deputados": 55,
+            "partido": "PSD"
+          },
+          {
+            "deputados": 51,
+            "partido": "PP"
+          },
+          {
+            "deputados": 49,
+            "partido": "MDB"
+          }
+        ]
+      },
+      {
+        "comunidade": 141,
+        "tamanho": 177,
+        "topPartidos": [
+          {
+            "deputados": 76,
+            "partido": "PT"
+          },
+          {
+            "deputados": 20,
+            "partido": "PDT"
+          },
+          {
+            "deputados": 19,
+            "partido": "PSB"
+          },
+          {
+            "deputados": 16,
+            "partido": "PSOL"
+          },
+          {
+            "deputados": 12,
+            "partido": "PSD"
+          }
+        ]
+      },
+      {
+        "comunidade": 347,
+        "tamanho": 170,
+        "topPartidos": [
+          {
+            "deputados": 120,
+            "partido": "PL"
+          },
+          {
+            "deputados": 22,
+            "partido": "UNIÃO"
+          },
+          {
+            "deputados": 21,
+            "partido": "PP"
+          },
+          {
+            "deputados": 12,
+            "partido": "REPUBLICANOS"
+          },
+          {
+            "deputados": 10,
+            "partido": "PSD"
+          }
+        ]
+      }
+    ],
+    "coesao_partidos": [
+      {
+        "partido": "SOLIDARIEDADE",
+        "total": 12,
+        "comunidadePrincipal": 141,
+        "naPrincipal": 6,
+        "taxaCoesao": 0.5,
+        "numComunidades": 3
+      },
+      {
+        "partido": "AVANTE",
+        "total": 10,
+        "comunidadePrincipal": 497,
+        "naPrincipal": 6,
+        "taxaCoesao": 0.6,
+        "numComunidades": 3
+      },
+      {
+        "partido": "PSC",
+        "total": 12,
+        "comunidadePrincipal": 497,
+        "naPrincipal": 8,
+        "taxaCoesao": 0.6667,
+        "numComunidades": 3
+      },
+      {
+        "partido": "PP",
+        "total": 76,
+        "comunidadePrincipal": 497,
+        "naPrincipal": 51,
+        "taxaCoesao": 0.6711,
+        "numComunidades": 3
+      },
+      {
+        "partido": "UNIÃO",
+        "total": 93,
+        "comunidadePrincipal": 497,
+        "naPrincipal": 64,
+        "taxaCoesao": 0.6882,
+        "numComunidades": 3
+      },
+      {
+        "partido": "PODE",
+        "total": 42,
+        "comunidadePrincipal": 497,
+        "naPrincipal": 29,
+        "taxaCoesao": 0.6905,
+        "numComunidades": 3
+      },
+      {
+        "partido": "PSD",
+        "total": 77,
+        "comunidadePrincipal": 497,
+        "naPrincipal": 55,
+        "taxaCoesao": 0.7143,
+        "numComunidades": 3
+      },
+      {
+        "partido": "PSDB",
+        "total": 26,
+        "comunidadePrincipal": 497,
+        "naPrincipal": 20,
+        "taxaCoesao": 0.7692,
+        "numComunidades": 3
+      },
+      {
+        "partido": "REPUBLICANOS",
+        "total": 79,
+        "comunidadePrincipal": 497,
+        "naPrincipal": 62,
+        "taxaCoesao": 0.7848,
+        "numComunidades": 3
+      },
+      {
+        "partido": "MDB",
+        "total": 62,
+        "comunidadePrincipal": 497,
+        "naPrincipal": 49,
+        "taxaCoesao": 0.7903,
+        "numComunidades": 3
+      },
+      {
+        "partido": "PSB",
+        "total": 23,
+        "comunidadePrincipal": 141,
+        "naPrincipal": 19,
+        "taxaCoesao": 0.8261,
+        "numComunidades": 2
+      },
+      {
+        "partido": "PL",
+        "total": 140,
+        "comunidadePrincipal": 347,
+        "naPrincipal": 120,
+        "taxaCoesao": 0.8571,
+        "numComunidades": 3
+      },
+      {
+        "partido": "PDT",
+        "total": 23,
+        "comunidadePrincipal": 141,
+        "naPrincipal": 20,
+        "taxaCoesao": 0.8696,
+        "numComunidades": 2
+      },
+      {
+        "partido": "PT",
+        "total": 76,
+        "comunidadePrincipal": 141,
+        "naPrincipal": 76,
+        "taxaCoesao": 1.0,
+        "numComunidades": 1
+      },
+      {
+        "partido": "PSOL",
+        "total": 16,
+        "comunidadePrincipal": 141,
+        "naPrincipal": 16,
+        "taxaCoesao": 1.0,
+        "numComunidades": 1
+      },
+      {
+        "partido": "PCdoB",
+        "total": 11,
+        "comunidadePrincipal": 141,
+        "naPrincipal": 11,
+        "taxaCoesao": 1.0,
+        "numComunidades": 1
+      }
+    ],
+    "tempo_segundos": 33.2369
+  },
+  "comunidades_leiden": {
+    "community_count": 3,
+    "modularity": 0.2167,
+    "compute_millis": 389,
+    "write_millis": 82
+  },
+  "centralidade_coautoria": {
+    "nos_projetados": 546,
+    "relacoes_projetadas": 175864,
+    "pagerank_iteracoes": 20,
+    "pagerank_convergiu": false,
+    "pagerank_compute_millis": 303,
+    "betweenness_compute_millis": 727,
+    "top_pagerank": [
+      {
+        "id": 220574,
+        "nome": "Cabo Gilberto Silva",
+        "uf": "PB",
+        "partidos": [
+          "PL"
+        ],
+        "pagerank": 2.377
+      },
+      {
+        "id": 73579,
+        "nome": "Alberto Fraga",
+        "uf": "DF",
+        "partidos": [
+          "PL"
+        ],
+        "pagerank": 2.271
+      },
+      {
+        "id": 204388,
+        "nome": "Bibo Nunes",
+        "uf": "RS",
+        "partidos": [
+          "PL"
+        ],
+        "pagerank": 2.234
+      },
+      {
+        "id": 220558,
+        "nome": "Zé Trovão",
+        "uf": "SC",
+        "partidos": [
+          "PL"
+        ],
+        "pagerank": 2.2185
+      },
+      {
+        "id": 204455,
+        "nome": "Luiz Lima",
+        "uf": "RJ",
+        "partidos": [
+          "NOVO",
+          "PL"
+        ],
+        "pagerank": 2.189
+      },
+      {
+        "id": 161440,
+        "nome": "Pezenti",
+        "uf": "SC",
+        "partidos": [
+          "MDB"
+        ],
+        "pagerank": 2.1531
+      },
+      {
+        "id": 204473,
+        "nome": "General Girão",
+        "uf": "RN",
+        "partidos": [
+          "PL"
+        ],
+        "pagerank": 2.1475
+      },
+      {
+        "id": 220654,
+        "nome": "Delegado Paulo Bilynskyj",
+        "uf": "SP",
+        "partidos": [
+          "PL"
+        ],
+        "pagerank": 2.1138
+      },
+      {
+        "id": 98057,
+        "nome": "Lafayette de Andrada",
+        "uf": "MG",
+        "partidos": [
+          "REPUBLICANOS",
+          "PL"
+        ],
+        "pagerank": 1.9781
+      },
+      {
+        "id": 204416,
+        "nome": "Sanderson",
+        "uf": "RS",
+        "partidos": [
+          "PL"
+        ],
+        "pagerank": 1.9764
+      }
+    ],
+    "top_betweenness": [
+      {
+        "id": 98615,
+        "nome": "Ismael",
+        "uf": "SC",
+        "partidos": [
+          "PSD",
+          "PL"
+        ],
+        "betweenness": 913.91
+      },
+      {
+        "id": 74856,
+        "nome": "Laura Carneiro",
+        "uf": "RJ",
+        "partidos": [
+          "PSD"
+        ],
+        "betweenness": 879.26
+      },
+      {
+        "id": 69871,
+        "nome": "Bacelar",
+        "uf": "BA",
+        "partidos": [
+          "PV"
+        ],
+        "betweenness": 747.58
+      },
+      {
+        "id": 160598,
+        "nome": "Flávia Morais",
+        "uf": "GO",
+        "partidos": [
+          "MDB",
+          "PDT"
+        ],
+        "betweenness": 688.9
+      },
+      {
+        "id": 214694,
+        "nome": "Jorge Goetten",
+        "uf": "SC",
+        "partidos": [
+          "REPUBLICANOS",
+          "PL"
+        ],
+        "betweenness": 582.7
+      },
+      {
+        "id": 224333,
+        "nome": "Welter",
+        "uf": "PR",
+        "partidos": [
+          "PT"
+        ],
+        "betweenness": 563.95
+      },
+      {
+        "id": 204412,
+        "nome": "Dr. Zacharias Calil",
+        "uf": "GO",
+        "partidos": [
+          "UNIÃO",
+          "MDB"
+        ],
+        "betweenness": 553.03
+      },
+      {
+        "id": 220591,
+        "nome": "Meire Serafim",
+        "uf": "AC",
+        "partidos": [
+          "UNIÃO"
+        ],
+        "betweenness": 551.78
+      },
+      {
+        "id": 98057,
+        "nome": "Lafayette de Andrada",
+        "uf": "MG",
+        "partidos": [
+          "REPUBLICANOS",
+          "PL"
+        ],
+        "betweenness": 520.04
+      },
+      {
+        "id": 220588,
+        "nome": "Roberto Duarte",
+        "uf": "AC",
+        "partidos": [
+          "REPUBLICANOS"
+        ],
+        "betweenness": 518.81
+      }
+    ],
+    "tempo_segundos": 3.4479
+  },
+  "similaridade_temas": {
+    "nos_projetados": 667,
+    "relacoes_projetadas": 14774,
+    "nodes_compared": 635,
+    "relationships_written": 2650,
+    "compute_millis": 412,
+    "top_interpartidarios": [
+      {
+        "deputado_a": "Dagoberto Nogueira",
+        "uf_a": "MS",
+        "partidos_a": [
+          "PP",
+          "PSDB"
+        ],
+        "deputado_b": "Adail Filho",
+        "uf_b": "AM",
+        "partidos_b": [
+          "REPUBLICANOS",
+          "MDB"
+        ],
+        "similaridade": 0.777
+      },
+      {
+        "deputado_a": "Márcio Jerry",
+        "uf_a": "MA",
+        "partidos_a": [
+          "PCdoB"
+        ],
+        "deputado_b": "Joseildo Ramos",
+        "uf_b": "BA",
+        "partidos_b": [
+          "PT"
+        ],
+        "similaridade": 0.7759
+      },
+      {
+        "deputado_a": "Aureo Ribeiro",
+        "uf_a": "RJ",
+        "partidos_a": [
+          "SOLIDARIEDADE"
+        ],
+        "deputado_b": "Renata Abreu",
+        "uf_b": "SP",
+        "partidos_b": [
+          "PODE"
+        ],
+        "similaridade": 0.7725
+      },
+      {
+        "deputado_a": "Sâmia Bomfim",
+        "uf_a": "SP",
+        "partidos_a": [
+          "PSOL"
+        ],
+        "deputado_b": "Camila Jara",
+        "uf_b": "MS",
+        "partidos_b": [
+          "PT"
+        ],
+        "similaridade": 0.7718
+      },
+      {
+        "deputado_a": "Talíria Petrone",
+        "uf_a": "RJ",
+        "partidos_a": [
+          "PSOL"
+        ],
+        "deputado_b": "Juliana Cardoso",
+        "uf_b": "SP",
+        "partidos_b": [
+          "PT"
+        ],
+        "similaridade": 0.7717
+      },
+      {
+        "deputado_a": "Vicentinho Júnior",
+        "uf_a": "TO",
+        "partidos_a": [
+          "PSDB",
+          "PP"
+        ],
+        "deputado_b": "Fernando Mineiro",
+        "uf_b": "RN",
+        "partidos_b": [
+          "PT"
+        ],
+        "similaridade": 0.7673
+      },
+      {
+        "deputado_a": "Bacelar",
+        "uf_a": "BA",
+        "partidos_a": [
+          "PV"
+        ],
+        "deputado_b": "Vermelho",
+        "uf_b": "PR",
+        "partidos_b": [
+          "PL",
+          "PP"
+        ],
+        "similaridade": 0.7613
+      },
+      {
+        "deputado_a": "Fred Linhares",
+        "uf_a": "DF",
+        "partidos_a": [
+          "REPUBLICANOS"
+        ],
+        "deputado_b": "Pedro Aihara",
+        "uf_b": "MG",
+        "partidos_b": [
+          "PATRIOTA",
+          "PRD",
+          "PP"
+        ],
+        "similaridade": 0.7608
+      },
+      {
+        "deputado_a": "Delegado Bruno Lima",
+        "uf_a": "SP",
+        "partidos_a": [
+          "PODE",
+          "PP"
+        ],
+        "deputado_b": "Delegado Matheus Laiola",
+        "uf_b": "PR",
+        "partidos_b": [
+          "UNIÃO"
+        ],
+        "similaridade": 0.759
+      },
+      {
+        "deputado_a": "Filipe Martins",
+        "uf_a": "TO",
+        "partidos_a": [
+          "PL"
+        ],
+        "deputado_b": "Franciane Bayer",
+        "uf_b": "RS",
+        "partidos_b": [
+          "REPUBLICANOS"
+        ],
+        "similaridade": 0.7574
+      }
+    ],
+    "tempo_segundos": 2.6984
+  },
+  "tempo_total_segundos": 39.6323
+}

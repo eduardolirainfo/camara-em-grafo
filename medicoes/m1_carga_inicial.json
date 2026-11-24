@@ -1,0 +1,26 @@
+{
+  "legislatura_id": 57,
+  "registros_partidos_api": 26,
+  "registros_deputados_api": 877,
+  "deputados_ids_distintos_api": 648,
+  "nos_por_rotulo": {
+    "Deputado": 648,
+    "Legislatura": 1,
+    "Partido": 26,
+    "UF": 27
+  },
+  "relacoes_por_tipo": {
+    "EXERCE_MANDATO_EM": 648,
+    "FILIADO_A": 855,
+    "REPRESENTA": 648
+  },
+  "tempo_segundos": 17.5408,
+  "total_nos": 702,
+  "total_relacoes": 2151,
+  "requisicoes_rede": 11,
+  "hits_cache": 0,
+  "versoes_servidor": {
+    "neo4j": "5.26.34 (community)",
+    "gds": "2.13.15"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "legislatura_id": 57,
+  "anos": [
+    2023,
+    2024,
+    2025,
+    2026
+  ],
+  "tipos_filtrados": [
+    "PDL",
+    "PEC",
+    "PL",
+    "PLP",
+    "PRC"
+  ],
+  "proposicoes_lidas_csv": 285403,
+  "proposicoes_no_recorte": 26796,
+  "temas_distintos_csv": 32,
+  "relacoes_tema_lidas": 58883,
+  "autores_lidos_csv": 484178,
+  "autores_deputados_vinculados": 44122,
+  "autores_ignorados_nao_deputado": 3027,
+  "autores_ignorados_fora_legislatura": 15,
+  "coautoria": {
+    "legislatura_id": 57,
+    "anos": [
+      2023,
+      2024,
+      2025,
+      2026
+    ],
+    "tipos": [
+      "PDL",
+      "PEC",
+      "PL",
+      "PLP",
+      "PRC"
+    ],
+    "minimo": 1,
+    "pares_criados": 157536,
+    "tempo_segundos": 30.1083
+  },
+  "nos_por_rotulo": {
+    "Deputado": 648,
+    "Legislatura": 1,
+    "Partido": 26,
+    "Proposicao": 26796,
+    "Tema": 32,
+    "UF": 27
+  },
+  "relacoes_por_tipo": {
+    "AUTOR_DE": 44122,
+    "COAUTOR_COM": 157536,
+    "EXERCE_MANDATO_EM": 648,
+    "FILIADO_A": 855,
+    "REPRESENTA": 648,
+    "TRATA_DE": 58883
+  },
+  "tempo_carga_segundos": 53.6646,
+  "tempo_total_segundos": 86.1913,
+  "total_nos": 27530,
+  "total_relacoes": 262692,
+  "downloads_rede": 12,
+  "hits_cache": 0
+}
