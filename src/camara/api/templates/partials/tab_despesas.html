@@ -48,25 +48,25 @@
   <!-- Gráficos: Gasto Mensal (Barras) + Distribuição por Categoria (Rosca) -->
   {% if despesas.mensal %}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="bg-white border border-rule p-4 lg:col-span-2">
+    <div class="bg-white border border-rule p-4 lg:col-span-2 min-w-0 overflow-hidden">
       <div class="flex flex-wrap items-center justify-between gap-2 pb-2.5 mb-3 border-b border-rule">
         <h3 class="text-sm font-bold text-ink">Gasto Mensal em {{ ano }}</h3>
         <span class="text-xs font-mono text-muted">Total no ano: <strong class="text-civic num">{{ despesas.total_ano|brl }}</strong></span>
       </div>
-      <div class="h-60">
-        <canvas id="grafico-mensal-{{ dep_id }}-{{ ano }}"></canvas>
+      <div class="relative w-full h-64">
+        <canvas id="grafico-mensal-{{ dep_id }}-{{ ano }}-{{ mes or 'all' }}"></canvas>
       </div>
     </div>
 
-    <div class="bg-white border border-rule p-4 flex flex-col">
+    <div class="bg-white border border-rule p-4 flex flex-col min-w-0 overflow-hidden">
       <div class="pb-2.5 mb-2 border-b border-rule">
         <h3 class="text-sm font-bold text-ink">Divisão por Categoria</h3>
         <div class="text-xs font-mono text-muted mt-0.5">
           Filtro: <strong class="text-civic num">{{ despesas.total|brl }}</strong>
         </div>
       </div>
-      <div class="h-52 flex-1">
-        <canvas id="grafico-cat-{{ dep_id }}-{{ ano }}"></canvas>
+      <div class="relative w-full h-60 flex-1">
+        <canvas id="grafico-cat-{{ dep_id }}-{{ ano }}-{{ mes or 'all' }}"></canvas>
       </div>
     </div>
   </div>
@@ -76,78 +76,123 @@
     if (typeof Chart === 'undefined') return;
     const mensal = {{ despesas.mensal | tojson }};
     const mesSelecionado = {{ mes | tojson }};
+    const catsRaw = {{ despesas.categorias[:6] | tojson }};
+    const cats = catsRaw.filter(c => Number(c.valor || 0) > 0);
+    const barId = 'grafico-mensal-{{ dep_id }}-{{ ano }}-{{ mes or "all" }}';
+    const pieId = 'grafico-cat-{{ dep_id }}-{{ ano }}-{{ mes or "all" }}';
     const fmtBRL = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-    const ctxBar = document.getElementById('grafico-mensal-{{ dep_id }}-{{ ano }}');
-    if (ctxBar) {
-      new Chart(ctxBar, {
-        type: 'bar',
-        data: {
-          labels: mensal.map(m => m.sigla),
-          datasets: [{
-            label: 'Gasto mensal',
-            data: mensal.map(m => m.valor),
-            backgroundColor: mensal.map(m => (mesSelecionado && m.mes === mesSelecionado) ? '#C83226' : '#141413'),
-            borderRadius: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: '#141413',
-              titleFont: { family: 'IBM Plex Mono' },
-              bodyFont: { family: 'IBM Plex Mono' },
-              cornerRadius: 0,
-              callbacks: { label: (ctx) => fmtBRL(ctx.raw) }
-            }
+    function renderizarGraficos() {
+      const cs = getComputedStyle(document.documentElement);
+      const colBar = cs.getPropertyValue('--chart-bar').trim() || '#141413';
+      const colSignal = cs.getPropertyValue('--accent-signal').trim() || '#C83226';
+      const colCivic = cs.getPropertyValue('--accent-civic').trim() || '#155E34';
+      const colOchre = cs.getPropertyValue('--accent-ochre').trim() || '#9A5B06';
+      const colCobalt = cs.getPropertyValue('--accent-cobalt').trim() || '#1D4ED8';
+      const colMuted = cs.getPropertyValue('--text-muted').trim() || '#666259';
+      const colInk = cs.getPropertyValue('--text-ink').trim() || '#141413';
+      const colCard = cs.getPropertyValue('--bg-card').trim() || '#FFFFFF';
+      const colGrid = cs.getPropertyValue('--chart-grid').trim() || '#E6E2D9';
+
+      const ctxBar = document.getElementById(barId);
+      if (ctxBar) {
+        const prevBar = Chart.getChart(ctxBar);
+        if (prevBar) prevBar.destroy();
+        new Chart(ctxBar, {
+          type: 'bar',
+          data: {
+            labels: mensal.map(m => m.sigla),
+            datasets: [{
+              label: 'Gasto mensal',
+              data: mensal.map(m => m.valor),
+              backgroundColor: mensal.map(m => (mesSelecionado && m.mes === mesSelecionado) ? colSignal : colBar),
+              borderRadius: 0,
+              maxBarThickness: 36
+            }]
           },
-          scales: {
-            x: { ticks: { color: '#666259', font: { family: 'IBM Plex Mono', size: 11 } }, grid: { display: false } },
-            y: {
-              ticks: {
-                color: '#666259',
-                font: { family: 'IBM Plex Mono', size: 11 },
-                callback: (v) => v >= 1000 ? 'R$ ' + (v / 1000).toFixed(0) + ' mil' : 'R$ ' + v
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 220 },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                backgroundColor: colInk,
+                titleColor: colCard,
+                bodyColor: colCard,
+                titleFont: { family: 'IBM Plex Mono' },
+                bodyFont: { family: 'IBM Plex Mono' },
+                cornerRadius: 0,
+                callbacks: { label: (ctx) => fmtBRL(ctx.raw) }
+              }
+            },
+            scales: {
+              x: {
+                ticks: { color: colMuted, autoSkip: false, maxRotation: 0, font: { family: 'IBM Plex Mono', size: 10 } },
+                grid: { display: false }
               },
-              grid: { color: '#E6E2D9' }
+              y: {
+                beginAtZero: true,
+                ticks: {
+                  color: colMuted,
+                  font: { family: 'IBM Plex Mono', size: 10 },
+                  callback: (v) => Math.abs(v) >= 1000 ? 'R$ ' + (v / 1000).toFixed(0) + 'k' : 'R$ ' + v
+                },
+                grid: { color: colGrid }
+              }
             }
           }
-        }
-      });
+        });
+      }
+
+      const ctxPie = document.getElementById(pieId);
+      if (ctxPie && cats.length > 0) {
+        const prevPie = Chart.getChart(ctxPie);
+        if (prevPie) prevPie.destroy();
+        new Chart(ctxPie, {
+          type: 'doughnut',
+          data: {
+            labels: cats.map(c => c.tipo.length > 22 ? c.tipo.slice(0, 22) + '…' : c.tipo),
+            datasets: [{
+              data: cats.map(c => c.valor),
+              backgroundColor: [colBar, colSignal, colCivic, colOchre, colCobalt, colMuted],
+              borderColor: colCard,
+              borderWidth: 2
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 220 },
+            cutout: '56%',
+            layout: { padding: { top: 4, bottom: 4, left: 4, right: 4 } },
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { color: colInk, boxWidth: 10, padding: 8, font: { family: 'Inter', size: 10 } }
+              },
+              tooltip: {
+                backgroundColor: colInk,
+                titleColor: colCard,
+                bodyColor: colCard,
+                cornerRadius: 0,
+                callbacks: { label: (ctx) => ctx.label + ': ' + fmtBRL(ctx.raw) }
+              }
+            }
+          }
+        });
+      }
     }
 
-    const cats = {{ despesas.categorias[:6] | tojson }};
-    const ctxPie = document.getElementById('grafico-cat-{{ dep_id }}-{{ ano }}');
-    if (ctxPie && cats.length > 0) {
-      new Chart(ctxPie, {
-        type: 'doughnut',
-        data: {
-          labels: cats.map(c => c.tipo.length > 26 ? c.tipo.slice(0, 26) + '…' : c.tipo),
-          datasets: [{
-            data: cats.map(c => c.valor),
-            backgroundColor: ['#141413', '#C83226', '#155E34', '#9A5B06', '#1D4ED8', '#8C877D'],
-            borderColor: '#FFFFFF',
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          cutout: '58%',
-          plugins: {
-            legend: { position: 'bottom', labels: { color: '#141413', boxWidth: 10, font: { family: 'Inter', size: 10 } } },
-            tooltip: {
-              backgroundColor: '#141413',
-              cornerRadius: 0,
-              callbacks: { label: (ctx) => ctx.label + ': ' + fmtBRL(ctx.raw) }
-            }
-          }
-        }
-      });
+    requestAnimationFrame(renderizarGraficos);
+    if (!window.__cgChartThemeListener) {
+      window.__cgChartThemeListener = true;
     }
+    window.addEventListener('cg-theme-changed', () => {
+      if (document.getElementById(barId) || document.getElementById(pieId)) {
+        renderizarGraficos();
+      }
+    });
   })();
   </script>
   {% endif %}
@@ -167,7 +212,7 @@
             <span class="num text-ink font-semibold shrink-0">{{ cat.valor|brl }} <span class="text-muted font-normal">({{ cat.percentual }}%)</span></span>
           </div>
           <div class="w-full h-1.5 bg-tint overflow-hidden">
-            <div class="h-full bg-ink" style="width: {{ cat.percentual }}%"></div>
+            <div class="h-full bg-ink" style="width: {{ [0, cat.percentual]|max }}%"></div>
           </div>
         </div>
         {% endfor %}

@@ -4,12 +4,22 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Câmara em Grafo{% endblock %}</title>
+  <script>
+    (function() {
+      const saved = localStorage.getItem('cg-theme');
+      const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (saved === 'dark' || (!saved && prefersDark)) {
+        document.documentElement.classList.add('dark');
+      }
+    })();
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
@@ -17,15 +27,15 @@
             mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
           },
           colors: {
-            paper: '#F5F3EE',
-            tint: '#ECE9E1',
-            rule: '#D8D4CA',
-            ink: '#141413',
-            muted: '#666259',
-            signal: '#C83226',
-            civic: '#155E34',
-            ochre: '#9A5B06',
-            cobalt: '#1D4ED8',
+            paper: 'var(--bg-paper)',
+            tint: 'var(--bg-tint)',
+            rule: 'var(--border-rule)',
+            ink: 'var(--text-ink)',
+            muted: 'var(--text-muted)',
+            signal: 'var(--accent-signal)',
+            civic: 'var(--accent-civic)',
+            ochre: 'var(--accent-ochre)',
+            cobalt: 'var(--accent-cobalt)',
           }
         }
       }
@@ -34,8 +44,48 @@
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <style>
+    :root {
+      --bg-paper: #F5F3EE;
+      --bg-card: #FFFFFF;
+      --bg-tint: #ECE9E1;
+      --border-rule: #D8D4CA;
+      --text-ink: #141413;
+      --text-muted: #666259;
+      --accent-signal: #C83226;
+      --accent-civic: #155E34;
+      --accent-ochre: #9A5B06;
+      --accent-cobalt: #1D4ED8;
+      --chart-grid: #E6E2D9;
+      --chart-bar: #141413;
+      --tip-bg: #141413;
+      --tip-fg: #F5F3EE;
+    }
+    html.dark {
+      --bg-paper: #111110;
+      --bg-card: #1A1A18;
+      --bg-tint: #242421;
+      --border-rule: #34332E;
+      --text-ink: #F2EFE9;
+      --text-muted: #A19D94;
+      --accent-signal: #E54D40;
+      --accent-civic: #34B363;
+      --accent-ochre: #E5A235;
+      --accent-cobalt: #60A5FA;
+      --chart-grid: #2B2A26;
+      --chart-bar: #E8E4DC;
+      --tip-bg: #F2EFE9;
+      --tip-fg: #141413;
+    }
+
     html { font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
-    body { background: #F5F3EE; color: #141413; -webkit-font-smoothing: antialiased; }
+    body { background: var(--bg-paper); color: var(--text-ink); -webkit-font-smoothing: antialiased; transition: background-color 0.15s ease, color 0.15s ease; }
+
+    /* Superfícies brancas e badges adaptam automaticamente no tema escuro suíço */
+    html.dark .bg-white { background-color: var(--bg-card) !important; }
+    html.dark .bg-amber-50 { background-color: rgba(229, 162, 53, 0.14) !important; border-color: rgba(229, 162, 53, 0.45) !important; }
+    html.dark .bg-red-50 { background-color: rgba(229, 77, 64, 0.14) !important; border-color: rgba(229, 77, 64, 0.45) !important; }
+    html.dark .bg-blue-50 { background-color: rgba(96, 165, 250, 0.14) !important; border-color: rgba(96, 165, 250, 0.45) !important; }
+
     .num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
     .micro {
       font-family: 'IBM Plex Mono', ui-monospace, monospace;
@@ -43,16 +93,46 @@
       line-height: 1.2;
       letter-spacing: 0.08em;
       text-transform: uppercase;
-      color: #666259;
+      color: var(--text-muted);
     }
+
+    /* Indicadores de carregamento (HTMX + transição entre páginas) */
     .htmx-indicator { display: none; }
     .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: inline-flex; }
+    .htmx-request { opacity: 0.65; transition: opacity 0.15s ease; }
+
+    #nav-progress {
+      position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+      background: var(--accent-signal); z-index: 100;
+      opacity: 0; pointer-events: none;
+      transition: width 0.25s ease, opacity 0.18s ease;
+    }
+    #nav-progress.active { opacity: 1; width: 78%; }
+    #nav-progress.done { opacity: 0; width: 100%; }
+
+    #nav-toast {
+      position: fixed; bottom: 16px; right: 16px; z-index: 90;
+      background: var(--text-ink); color: var(--bg-paper);
+      padding: 0.45rem 0.75rem;
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+      font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase;
+      display: none; align-items: center; gap: 0.5rem;
+      border: 1px solid var(--border-rule);
+    }
+    #nav-toast.visible { display: inline-flex; }
+    @keyframes cg-spin { to { transform: rotate(360deg); } }
+    .cg-spinner {
+      width: 11px; height: 11px;
+      border: 2px solid currentColor; border-top-color: transparent;
+      border-radius: 9999px; animation: cg-spin 0.65s linear infinite;
+    }
+
     .tip-wrap { position: relative; }
     .tip-box {
       visibility: hidden; opacity: 0; pointer-events: none;
       position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
       width: 232px; max-width: calc(100vw - 2rem); z-index: 60;
-      background: #141413; color: #F5F3EE; border: 1px solid #141413;
+      background: var(--tip-bg); color: var(--tip-fg); border: 1px solid var(--border-rule);
       padding: 0.55rem 0.7rem;
       font-family: 'Inter', sans-serif;
       font-size: 11px; line-height: 1.4; text-align: left; font-weight: 400;
@@ -64,10 +144,17 @@
   </style>
 </head>
 <body class="bg-paper text-ink min-h-screen flex flex-col font-sans">
+  <!-- Barra global de progresso (transições de página e HTMX) -->
+  <div id="nav-progress" aria-hidden="true"></div>
+  <div id="nav-toast" role="status" aria-live="polite">
+    <span class="cg-spinner"></span>
+    <span id="nav-toast-text">Carregando...</span>
+  </div>
+
   <header class="bg-white border-b-2 border-ink sticky top-0 z-30">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
       <a href="/ui" class="flex items-center gap-3 group">
-        <span class="w-9 h-9 bg-ink text-paper flex items-center justify-center font-mono font-semibold text-sm tracking-tight group-hover:bg-signal transition-colors">
+        <span class="w-9 h-9 bg-ink text-paper flex items-center justify-center font-mono font-semibold text-sm tracking-tight group-hover:bg-signal group-hover:text-white transition-colors">
           CG
         </span>
         <div>
@@ -79,10 +166,15 @@
           </div>
         </div>
       </a>
-      <nav class="flex items-center gap-1.5 sm:gap-2 text-xs font-mono uppercase tracking-[0.06em]">
-        <a href="/ui" class="px-3 py-2 bg-ink text-paper hover:bg-signal transition-colors">Explorador</a>
+      <nav class="flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs font-mono uppercase tracking-[0.06em]">
+        <a href="/ui" class="px-3 py-2 bg-ink text-paper hover:bg-signal hover:text-white transition-colors">Explorador</a>
         <a href="/graphql" target="_blank" class="px-3 py-2 border border-rule bg-white text-ink hover:border-ink transition-colors">API GraphQL ↗</a>
         <a href="/health" target="_blank" class="px-3 py-2 border border-rule bg-white text-muted hover:border-ink hover:text-ink transition-colors">Status</a>
+        <button type="button" id="theme-toggle" onclick="alternarTema()"
+                title="Alternar entre tema claro e escuro"
+                class="px-3 py-2 border border-ink bg-paper text-ink hover:bg-ink hover:text-paper transition-colors">
+          <span id="theme-label">Escuro</span>
+        </button>
       </nav>
     </div>
   </header>
@@ -101,5 +193,70 @@
       </div>
     </div>
   </footer>
+
+  <script>
+    (function() {
+      const bar = document.getElementById('nav-progress');
+      const toast = document.getElementById('nav-toast');
+      const toastText = document.getElementById('nav-toast-text');
+      const themeLabel = document.getElementById('theme-label');
+
+      function atualizarRotuloTema() {
+        if (!themeLabel) return;
+        themeLabel.textContent = document.documentElement.classList.contains('dark') ? 'Claro' : 'Escuro';
+      }
+      atualizarRotuloTema();
+
+      window.alternarTema = function() {
+        const isDark = document.documentElement.classList.toggle('dark');
+        localStorage.setItem('cg-theme', isDark ? 'dark' : 'light');
+        atualizarRotuloTema();
+        window.dispatchEvent(new CustomEvent('cg-theme-changed', { detail: { dark: isDark } }));
+      };
+
+      let activeLoads = 0;
+      function startLoad(msg) {
+        activeLoads++;
+        if (toastText && msg) toastText.textContent = msg;
+        if (bar) { bar.classList.remove('done'); bar.classList.add('active'); }
+        if (toast) toast.classList.add('visible');
+      }
+      function stopLoad() {
+        activeLoads = Math.max(0, activeLoads - 1);
+        if (activeLoads > 0) return;
+        if (bar) {
+          bar.classList.remove('active');
+          bar.classList.add('done');
+          setTimeout(() => { bar.classList.remove('done'); }, 220);
+        }
+        if (toast) toast.classList.remove('visible');
+      }
+
+      // HTMX transitions
+      document.body.addEventListener('htmx:beforeRequest', () => startLoad('Carregando dados...'));
+      document.body.addEventListener('htmx:afterRequest', () => stopLoad());
+      document.body.addEventListener('htmx:responseError', () => stopLoad());
+      document.body.addEventListener('htmx:sendError', () => stopLoad());
+
+      // Full-page internal link navigation (/ui, /ui/deputado/...)
+      document.addEventListener('click', (e) => {
+        if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey || e.button !== 0) return;
+        const link = e.target.closest('a[href]');
+        if (!link) return;
+        if (link.target === '_blank' || link.hasAttribute('download')) return;
+        const href = link.getAttribute('href') || '';
+        if (href.startsWith('/ui') && href !== window.location.pathname + window.location.search) {
+          startLoad('Abrindo página...');
+        }
+      });
+
+      // Reset on browser Back/Forward cache restore
+      window.addEventListener('pageshow', () => {
+        activeLoads = 0;
+        if (bar) bar.classList.remove('active', 'done');
+        if (toast) toast.classList.remove('visible');
+      });
+    })();
+  </script>
 </body>
 </html>

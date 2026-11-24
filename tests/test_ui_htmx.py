@@ -177,3 +177,16 @@ def test_ui_pagina_inicial_e_ficha_completa(tmp_path: Path) -> None:
 
     assert url_bandeira_uf("SP") is not None
     assert url_logo_partido("PT") == "https://www.camara.leg.br/internet/Deputado/img/partidos/PT.gif"
+
+
+def test_normalizacao_valor_liquido_invertido_api_camara() -> None:
+    from camara.api.ficha_service import _valor_liquido_despesa
+
+    # Caso real da API v2 em 2026: valorDocumento positivo, valorGlosa 0 e valorLiquido negativo
+    assert _valor_liquido_despesa({"valorDocumento": 95000.0, "valorGlosa": 0.0, "valorLiquido": -95000.0}) == 95000.0
+    # Com glosa parcial
+    assert _valor_liquido_despesa({"valorDocumento": 1000.0, "valorGlosa": 200.0, "valorLiquido": -800.0}) == 800.0
+    # Estorno real de bilhete aéreo (documento negativo) continua negativo
+    assert _valor_liquido_despesa({"valorDocumento": -450.0, "valorGlosa": 0.0, "valorLiquido": -450.0}) == -450.0
+    # Caso normal positivo
+    assert _valor_liquido_despesa({"valorDocumento": 1159.25, "valorGlosa": 0.0, "valorLiquido": 1159.25}) == 1159.25

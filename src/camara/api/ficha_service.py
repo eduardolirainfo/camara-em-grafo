@@ -61,6 +61,25 @@ def url_bandeira_uf(sigla: str | None) -> str | None:
     return info["bandeira"] if info else None
 
 
+def _valor_liquido_despesa(item: dict[str, Any]) -> float:
+    """Normaliza o valor líquido de um lançamento da API CEAP.
+
+    A API v2 da Câmara ocasionalmente devolve ``valorLiquido`` com sinal invertido
+    (ex.: ``valorDocumento = 95000.0``, ``valorGlosa = 0.0``, ``valorLiquido = -95000.0``),
+    enquanto o CSV em lote e o portal oficial exibem ``+95000.0``.
+    Estornos reais (ex.: passagem aérea cancelada) possuem ``valorDocumento <= 0``.
+    """
+    liq = float(item.get("valorLiquido") or 0.0)
+    doc = float(item.get("valorDocumento") or 0.0)
+    glosa = float(item.get("valorGlosa") or 0.0)
+    if doc > 0 and liq < 0:
+        corrigido = doc - glosa
+        return round(corrigido if corrigido >= 0 else abs(liq), 2)
+    if liq == 0.0 and doc != 0.0:
+        return round(doc - glosa, 2)
+    return round(liq, 2)
+
+
 class FichaDeputadoService:
     """Busca e faz cache em disco dos dados detalhados da Câmara para a ficha completa."""
 
@@ -127,24 +146,30 @@ class FichaDeputadoService:
             "JUL", "AGO", "SET", "OUT", "NOV", "DEZ",
         ]
         totais_mes: dict[int, float] = {m: 0.0 for m in range(1, 13)}
+        itens_normalizados: list[dict[str, Any]] = []
         for d in itens_ano:
+            valor = _valor_liquido_despesa(d)
+            item_norm = {**d, "valorLiquido": valor}
+            itens_normalizados.append(item_norm)
             m = int(d.get("mes") or 0)
             if 1 <= m <= 12:
-                totais_mes[m] += float(d.get("valorLiquido") or d.get("valorDocumento") or 0.0)
+                totais_mes[m] += valor
 
         mensal = [
             {"mes": m, "sigla": siglas_mes[m - 1], "valor": round(totais_mes[m], 2)}
             for m in range(1, 13)
         ]
 
-        itens = [d for d in itens_ano if mes is None or int(d.get("mes") or 0) == mes]
+        itens = [
+            d for d in itens_normalizados if mes is None or int(d.get("mes") or 0) == mes
+        ]
 
         total = 0.0
         por_tipo: dict[str, float] = defaultdict(float)
         por_fornecedor: dict[str, float] = defaultdict(float)
 
         for d in itens:
-            valor = float(d.get("valorLiquido") or d.get("valorDocumento") or 0.0)
+            valor = float(d["valorLiquido"])
             total += valor
             tipo = (d.get("tipoDespesa") or "Outros").strip()
             forn = (d.get("nomeFornecedor") or "Não informado").strip()
