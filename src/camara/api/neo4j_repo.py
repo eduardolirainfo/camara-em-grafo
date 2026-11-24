@@ -433,6 +433,7 @@ class Neo4jGraphRepository:
         uf: str | None = None,
         partido: str | None = None,
         comunidade: int | None = None,
+        situacao: str | None = None,
         ordenar: str = "nome",
         offset: int = 0,
         limit: int = 24,
@@ -458,6 +459,9 @@ class Neo4jGraphRepository:
             WHERE ($busca IS NULL OR toLower(d.nome) CONTAINS toLower($busca))
               AND ($uf IS NULL OR d.uf = $uf)
               AND ($comunidade IS NULL OR d.comunidadeVoto = $comunidade)
+              AND ($situacao IS NULL
+                   OR ($situacao = 'em_exercicio' AND coalesce(d.emExercicio, true) = true)
+                   OR ($situacao = 'fora_exercicio' AND coalesce(d.emExercicio, true) = false))
               AND ($partido IS NULL OR EXISTS {
                     MATCH (d)-[:FILIADO_A]->(p:Partido)
                     WHERE toUpper(p.sigla) = $partido
@@ -468,6 +472,7 @@ class Neo4jGraphRepository:
             "uf": uf.strip().upper() if uf and uf.strip() else None,
             "partido": partido.strip().upper() if partido and partido.strip() else None,
             "comunidade": comunidade,
+            "situacao": situacao.strip() if situacao and situacao.strip() else None,
             "offset": offset,
             "limit": limit,
         }
@@ -504,6 +509,7 @@ class Neo4jGraphRepository:
                    d.uf AS uf,
                    d.urlFoto AS urlFoto,
                    d.uri AS uri,
+                   coalesce(d.emExercicio, true) AS emExercicio,
                    d.comunidadeVoto AS comunidadeVoto,
                    round(taxaDivergencia, 4) AS taxaDivergencia,
                    totalContra,
@@ -539,6 +545,7 @@ class Neo4jGraphRepository:
             WITH d, totalProposicoes, count(DISTINCT v) AS totalVotos
             RETURN d.id AS id, d.nome AS nome, d.uf AS uf,
                    d.urlFoto AS urlFoto, d.uri AS uri, d.email AS email,
+                   coalesce(d.emExercicio, true) AS emExercicio,
                    d.comunidadeVoto AS comunidadeVoto,
                    d.comunidadeVotoLeiden AS comunidadeVotoLeiden,
                    coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,

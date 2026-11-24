@@ -19,7 +19,14 @@
     <div class="flex-1 min-w-0">
       <div class="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 class="text-2xl sm:text-3xl font-bold text-white">{{ dep.nome }}</h1>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <h1 class="text-2xl sm:text-3xl font-bold text-white">{{ dep.nome }}</h1>
+            {% if dep.emExercicio is sameas false %}
+            <span class="px-2.5 py-1 rounded-lg bg-slate-700/80 border border-slate-500 text-xs font-semibold uppercase tracking-wide text-slate-100">
+              Não está em exercício
+            </span>
+            {% endif %}
+          </div>
           {% if detalhes.get("nomeCivil") %}
           <p class="text-sm text-slate-400 mt-0.5">Nome civil: {{ detalhes.nomeCivil }}</p>
           {% endif %}

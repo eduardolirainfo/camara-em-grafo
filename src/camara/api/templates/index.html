@@ -60,11 +60,19 @@
         hx-target="#deputados-container"
         hx-trigger="submit, change from:select, keyup changed delay:300ms from:input[name='busca']"
         hx-indicator="#loading-deps"
-        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3">
+        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
     <div class="lg:col-span-2">
       <label class="block text-xs text-slate-400 mb-1">Buscar por nome</label>
       <input type="text" name="busca" placeholder="Ex.: Silva, Maria, Delegado..."
              class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Situação</label>
+      <select name="situacao" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+        <option value="">Todos (57ª Leg.)</option>
+        <option value="em_exercicio">Apenas em exercício</option>
+        <option value="fora_exercicio">Fora de exercício</option>
+      </select>
     </div>
     <div>
       <label class="block text-xs text-slate-400 mb-1">Estado (UF)</label>

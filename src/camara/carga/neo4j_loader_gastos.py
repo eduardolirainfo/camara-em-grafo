@@ -145,6 +145,40 @@ def baixar_cotas_zip(
     return arquivos
 
 
+CYPHER_ATUALIZAR_EXERCICIO = """
+MATCH (d:Deputado)
+SET d.emExercicio = d.id IN $idsAtivos
+RETURN count(CASE WHEN d.emExercicio THEN 1 END) AS emExercicio,
+       count(CASE WHEN NOT d.emExercicio THEN 1 END) AS foraExercicio
+"""
+
+
+def atualizar_em_exercicio(
+    driver: Driver,
+    api_base_url: str = "https://dadosabertos.camara.leg.br/api/v2",
+    user_agent: str = "camara-em-grafo/0.1 (projeto de estudo de dados abertos)",
+) -> dict[str, int]:
+    """Consulta /deputados (em exercício hoje) em 1 chamada e grava d.emExercicio no Neo4j."""
+    url = f"{api_base_url.rstrip('/')}/deputados"
+    with httpx.Client(
+        headers={"Accept": "application/json", "User-Agent": user_agent},
+        timeout=30.0,
+        follow_redirects=True,
+    ) as client:
+        resp = client.get(url, params={"itens": 1000})
+        resp.raise_for_status()
+        dados = resp.json().get("dados") or []
+    ids_ativos = [int(d["id"]) for d in dados if d.get("id") is not None]
+    with driver.session() as session:
+        rec = session.execute_write(
+            lambda tx: tx.run(CYPHER_ATUALIZAR_EXERCICIO, idsAtivos=ids_ativos).single()
+        )
+    return {
+        "em_exercicio": int(rec["emExercicio"]) if rec else 0,
+        "fora_exercicio": int(rec["foraExercicio"]) if rec else 0,
+    }
+
+
 def contar_funcionarios_por_deputado(cache_dir: Path) -> dict[int, int]:
     path = Path(cache_dir) / "arquivos" / "funcionarios" / "funcionarios.csv"
     if not path.exists():
@@ -319,6 +353,8 @@ def carregar_gastos_e_equipe(
                 "MATCH (d:Deputado) WHERE d.gastoTotalCeap IS NOT NULL RETURN count(d) AS n"
             ).single()["n"]
         )
+
+    atualizar_em_exercicio(driver=driver, user_agent=user_agent)
 
     return ResumoCargaGastos(
         anos=anos,
