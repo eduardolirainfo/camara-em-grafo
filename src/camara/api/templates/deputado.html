@@ -115,13 +115,13 @@
       {% if grp_dep %}{{ grp_dep.rotulo }}{% elif dep.comunidadeVoto is not none %}Grupo {{ dep.comunidadeVoto }}{% else %}—{% endif %}
     </div>
   </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5" title="Mede o quanto o deputado assina projetos junto com outros deputados muito ativos">
-    <div class="text-xs text-slate-400">Conexão em Projetos</div>
-    <div class="text-xl font-bold text-emerald-400 mt-0.5">{{ "%.2f"|format(dep.pagerank or 0) }}</div>
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5" title="Total gasto na Cota Parlamentar (CEAP) nos anos carregados">
+    <div class="text-xs text-slate-400">Gasto Cota (2023–26)</div>
+    <div class="text-lg font-bold text-emerald-400 mt-0.5">{{ dep.gastoTotalCeap|brl_curto }}</div>
   </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5" title="Mede o quanto o deputado funciona como ponte entre grupos diferentes">
-    <div class="text-xs text-slate-400">Articulação (Ponte)</div>
-    <div class="text-xl font-bold text-sky-400 mt-0.5">{{ "%.1f"|format(dep.betweenness or 0) }}</div>
+  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5" title="Passagens, hospedagem, veículos e combustíveis pagos pela Cota">
+    <div class="text-xs text-slate-400">Viagens e Desloc.</div>
+    <div class="text-lg font-bold text-sky-400 mt-0.5">{{ dep.gastoViagens|brl_curto }}</div>
   </div>
   <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
     <div class="text-xs text-slate-400">Projetos Assinados</div>

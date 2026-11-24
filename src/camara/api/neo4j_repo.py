@@ -439,11 +439,13 @@ class Neo4jGraphRepository:
     ) -> dict[str, Any]:
         ordem_sql = {
             "nome": "d.nome ASC",
-            "pagerank": "coalesce(d.pagerankCoautoria, 0.0) DESC, d.nome ASC",
-            "betweenness": "coalesce(d.betweennessCoautoria, 0.0) DESC, d.nome ASC",
+            "gastos_desc": "gastoTotalCeap DESC, d.nome ASC",
+            "viagens_desc": "gastoViagens DESC, d.nome ASC",
+            "divulgacao_desc": "gastoDivulgacao DESC, d.nome ASC",
             "divergencia": "taxaDivergencia DESC, totalContra DESC, d.nome ASC",
             "presenca_asc": "taxaPresenca ASC, d.nome ASC",
             "presenca_desc": "taxaPresenca DESC, d.nome ASC",
+            "funcionarios_desc": "numFuncionarios DESC, d.nome ASC",
             "trocas": "numPartidos DESC, d.nome ASC",
         }.get(ordenar, "d.nome ASC")
 
@@ -484,21 +486,27 @@ class Neo4jGraphRepository:
                  round(toFloat(totalVotos) / $totalVotacoes, 4) AS taxaPresenca,
                  [(d)-[:FILIADO_A]->(p:Partido) | p.sigla] AS partidos
             WITH d, taxaDivergencia, totalContra, totalVotos, taxaPresenca, partidos,
-                 size(partidos) AS numPartidos
+                 size(partidos) AS numPartidos,
+                 coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,
+                 coalesce(d.gastoViagens, 0.0) AS gastoViagens,
+                 coalesce(d.gastoDivulgacao, 0.0) AS gastoDivulgacao,
+                 coalesce(d.numFuncionarios, 0) AS numFuncionarios
             RETURN d.id AS id,
                    d.nome AS nome,
                    d.uf AS uf,
                    d.urlFoto AS urlFoto,
                    d.uri AS uri,
                    d.comunidadeVoto AS comunidadeVoto,
-                   round(coalesce(d.pagerankCoautoria, 0.0), 4) AS pagerank,
-                   round(coalesce(d.betweennessCoautoria, 0.0), 1) AS betweenness,
                    round(taxaDivergencia, 4) AS taxaDivergencia,
                    totalContra,
                    totalVotos,
                    taxaPresenca,
                    partidos,
-                   numPartidos
+                   numPartidos,
+                   gastoTotalCeap,
+                   gastoViagens,
+                   gastoDivulgacao,
+                   numFuncionarios
             ORDER BY {ordem_sql}
             SKIP $offset
             LIMIT $limit
@@ -520,8 +528,9 @@ class Neo4jGraphRepository:
                    d.urlFoto AS urlFoto, d.uri AS uri, d.email AS email,
                    d.comunidadeVoto AS comunidadeVoto,
                    d.comunidadeVotoLeiden AS comunidadeVotoLeiden,
-                   round(coalesce(d.pagerankCoautoria, 0.0), 4) AS pagerank,
-                   round(coalesce(d.betweennessCoautoria, 0.0), 2) AS betweenness,
+                   coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,
+                   coalesce(d.gastoViagens, 0.0) AS gastoViagens,
+                   coalesce(d.gastoDivulgacao, 0.0) AS gastoDivulgacao,
                    totalProposicoes, totalVotos,
                    [(d)-[:FILIADO_A]->(p:Partido) | {sigla: p.sigla, nome: p.nome, id: p.id}] AS partidos
             """,

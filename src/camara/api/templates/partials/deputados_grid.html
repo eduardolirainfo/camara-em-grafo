@@ -56,8 +56,16 @@
       </div>
     </div>
 
-    <!-- Métricas rápidas do grafo -->
-    <div class="grid grid-cols-3 gap-1.5 pt-2.5 border-t border-slate-800/80 text-center text-[11px]">
+    <!-- Indicadores objetivos de fiscalização -->
+    <div class="grid grid-cols-2 gap-1.5 pt-2.5 border-t border-slate-800/80 text-center text-[11px]">
+      <div class="bg-slate-950/60 rounded-lg py-1" title="Total gasto na Cota Parlamentar (CEAP) de 2023 a 2026">
+        <div class="text-slate-500">Gasto Cota</div>
+        <div class="font-semibold text-emerald-400">{{ d.gastoTotalCeap|brl_curto }}</div>
+      </div>
+      <div class="bg-slate-950/60 rounded-lg py-1" title="Gastos com passagens, hospedagem, combustíveis e locação de veículos (2023–2026)">
+        <div class="text-slate-500">Viagens</div>
+        <div class="font-semibold text-sky-300">{{ d.gastoViagens|brl_curto }}</div>
+      </div>
       <div class="bg-slate-950/60 rounded-lg py-1" title="Percentual de votações nominais em que o deputado registrou voto">
         <div class="text-slate-500">Presença</div>
         <div class="font-semibold {% if (d.taxaPresenca or 0) < 0.4 %}text-rose-400{% else %}text-slate-200{% endif %}">
@@ -68,12 +76,6 @@
         <div class="text-slate-500">Contra Part.</div>
         <div class="font-semibold {% if (d.taxaDivergencia or 0) >= 0.3 %}text-amber-400{% else %}text-slate-200{% endif %}">
           {{ d.taxaDivergencia|pct }}
-        </div>
-      </div>
-      <div class="bg-slate-950/60 rounded-lg py-1" title="Quantidade de partidos pelos quais passou na 57ª legislatura">
-        <div class="text-slate-500">Partidos</div>
-        <div class="font-semibold {% if (d.numPartidos or 0) >= 3 %}text-amber-400{% else %}text-slate-200{% endif %}">
-          {{ d.numPartidos or (d.partidos|length) }}
         </div>
       </div>
     </div>

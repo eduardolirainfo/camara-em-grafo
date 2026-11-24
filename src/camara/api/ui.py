@@ -32,6 +32,17 @@ def _fmt_brl(valor: float | None) -> str:
     return f"R$ {s}"
 
 
+def _fmt_brl_curto(valor: float | None) -> str:
+    if not valor:
+        return "R$ 0"
+    v = float(valor)
+    if v >= 1_000_000:
+        return f"R$ {v / 1_000_000:.2f} mi".replace(".", ",")
+    if v >= 1_000:
+        return f"R$ {v / 1_000:.0f} mil"
+    return f"R$ {v:.0f}"
+
+
 def _fmt_pct(valor: float | None) -> str:
     if valor is None:
         return "0%"
@@ -61,6 +72,7 @@ def criar_ui_router(
     templates.env.globals["UF_INFO"] = UF_INFO
     templates.env.globals["ANOS_DISPONIVEIS"] = anos_ordenados
     templates.env.filters["brl"] = _fmt_brl
+    templates.env.filters["brl_curto"] = _fmt_brl_curto
     templates.env.filters["pct"] = _fmt_pct
     templates.env.filters["data_br"] = _fmt_data_br
 

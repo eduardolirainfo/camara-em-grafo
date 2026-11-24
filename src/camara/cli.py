@@ -13,6 +13,7 @@ from neo4j import GraphDatabase
 
 from camara.analise.gds_m5 import executar_analises_m5
 from camara.carga.neo4j_loader import Neo4jLoaderM1
+from camara.carga.neo4j_loader_gastos import carregar_gastos_e_equipe
 from camara.carga.neo4j_loader_m2 import Neo4jLoaderM2
 from camara.carga.neo4j_loader_m3 import Neo4jLoaderM3
 from camara.coleta.arquivos import ArquivosCamaraClient
@@ -173,6 +174,13 @@ def _build_parser() -> argparse.ArgumentParser:
     p_medir_m6.add_argument("--votacao-id", type=str, default="1197773-90")
     p_medir_m6.add_argument("--salvar-json", type=Path, default=None)
     p_medir_m6.add_argument("--salvar-csv", type=Path, default=None)
+
+    p_gastos = sub.add_parser(
+        "carregar-gastos",
+        help="Baixa os arquivos anuais CEAP (.csv.zip) e grava gastos + equipe de gabinete nos deputados.",
+    )
+    p_gastos.add_argument("--anos", type=int, nargs="+", default=None)
+    p_gastos.add_argument("--forcar", action="store_true")
 
     return parser
 
@@ -486,6 +494,19 @@ def main(argv: list[str] | None = None) -> int:
         if args.salvar_csv:
             salvar_benchmark_csv(args.salvar_csv, saida)
         print(json.dumps(saida, ensure_ascii=False, indent=2))
+        return 0
+
+    if args.comando == "carregar-gastos":
+        anos = args.anos or settings.anos_m2()
+        with _criar_driver(settings) as driver:
+            resumo = carregar_gastos_e_equipe(
+                driver=driver,
+                cache_dir=settings.camara_cache_dir,
+                anos=anos,
+                user_agent=settings.camara_user_agent,
+                forcar_download=args.forcar,
+            )
+        print(json.dumps(resumo.to_dict(), ensure_ascii=False, indent=2))
         return 0
 
     return 1

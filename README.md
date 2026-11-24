@@ -376,6 +376,7 @@ Você **não precisa alterar o código Python nem os templates** para virar o an
      .\.venv\Scripts\camara.exe carregar-m1 --forcar-coleta
      .\.venv\Scripts\camara.exe carregar-m2
      .\.venv\Scripts\camara.exe carregar-m3
+     .\.venv\Scripts\camara.exe carregar-gastos
      .\.venv\Scripts\camara.exe analisar-m5
      ```
 2. **Para virar para a 58ª Legislatura (a partir de fev/2027):**
