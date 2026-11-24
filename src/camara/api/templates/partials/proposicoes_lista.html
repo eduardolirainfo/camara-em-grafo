@@ -1,26 +1,79 @@
 {% if not proposicoes %}
 <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center text-slate-400">
-  Nenhuma proposição encontrada para os filtros informados.
+  Nenhum projeto encontrado para os filtros informados.
 </div>
 {% else %}
 <div class="space-y-3">
   {% for p in proposicoes %}
   <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
     <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
-      <div class="flex items-center gap-2">
+      <div class="flex flex-wrap items-center gap-1.5">
         <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
           {{ p.siglaTipo }} {{ p.numero }}/{{ p.ano }}
         </span>
+        {% if p.dataApresentacao %}
+        <span class="text-xs text-slate-500">Apresentado em {{ p.dataApresentacao|data_br }}</span>
+        {% endif %}
         {% for t in p.temas %}
         <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-xs">{{ t.nome }}</span>
         {% endfor %}
       </div>
-      <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ p.id }}"
-         target="_blank" class="text-xs text-sky-400 hover:underline">
-        Fonte oficial ↗
-      </a>
+      <div class="flex items-center gap-3 text-xs">
+        <button hx-get="/ui/partials/proposicao/{{ p.id }}/status"
+                hx-target="#status-prop-{{ p.id }}"
+                hx-swap="innerHTML"
+                class="text-emerald-400 hover:text-emerald-300 font-medium">
+          Ver situação atual ↻
+        </button>
+        <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ p.id }}"
+           target="_blank" class="text-sky-400 hover:underline">
+          Fonte oficial ↗
+        </a>
+      </div>
     </div>
+
     <p class="text-sm text-slate-200 leading-relaxed">{{ p.ementa }}</p>
+
+    <!-- Votações nominais registradas no grafo -->
+    {% if p.votacoes %}
+    <div class="mt-2.5 space-y-1.5">
+      {% for v in p.votacoes[:2] %}
+      <div class="bg-slate-950/70 border border-slate-800 rounded-lg px-3 py-2 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            {% if v.aprovacao is sameas true %}
+            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">Votado · Aprovado</span>
+            {% elif v.aprovacao is sameas false %}
+            <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold">Votado · Rejeitado</span>
+            {% else %}
+            <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-semibold">Votação Nominal</span>
+            {% endif %}
+            <span class="text-slate-400">{{ v.data|data_br }} ({{ v.siglaOrgao }})</span>
+          </div>
+          {% if v.pctSim is not none %}
+          <span class="text-slate-200 font-medium">
+            Sim: <strong class="text-emerald-400">{{ v.votosSim }}</strong> ·
+            Não: <strong class="text-rose-400">{{ v.votosNao }}</strong>
+            ({{ v.pctSim }}% Sim)
+          </span>
+          {% endif %}
+        </div>
+        {% if v.pctSim is not none %}
+        <div class="w-full h-1.5 bg-rose-500/40 rounded-full mt-1.5 overflow-hidden">
+          <div class="h-full bg-emerald-500" style="width: {{ v.pctSim }}%"></div>
+        </div>
+        {% endif %}
+      </div>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="mt-2 text-[11px] text-slate-500">
+      Sem votação nominal em plenário registrada até o momento (clique em <em>Ver situação atual</em> para conferir o andamento nas comissões).
+    </div>
+    {% endif %}
+
+    <div id="status-prop-{{ p.id }}"></div>
+
     {% if p.autores %}
     <div class="flex flex-wrap items-center gap-1.5 mt-2.5 text-xs text-slate-400">
       <span>Autores:</span>

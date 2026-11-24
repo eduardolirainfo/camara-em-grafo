@@ -47,7 +47,8 @@ class Neo4jGraphRepository:
             MATCH (d:Deputado)
             WHERE ($uf IS NULL OR d.uf = $uf)
               AND ($partido IS NULL OR EXISTS {
-                    MATCH (d)-[:FILIADO_A]->(p:Partido {sigla: $partido})
+                    MATCH (d)-[:FILIADO_A]->(p:Partido)
+                    WHERE toUpper(p.sigla) = $partido
                   })
             RETURN d.id AS id, d.nome AS nome, d.uf AS uf,
                    d.urlFoto AS urlFoto, d.uri AS uri
@@ -326,6 +327,40 @@ class Neo4jGraphRepository:
         mapa = {str(r["votId"]): list(r["props"]) for r in rows}
         return {vid: mapa.get(vid, []) for vid in vot_ids}
 
+    async def batch_votacoes_por_proposicoes(
+        self, prop_ids: list[int]
+    ) -> dict[int, list[dict[str, Any]]]:
+        rows = await self._run(
+            """
+            UNWIND $ids AS propId
+            MATCH (v:Votacao)-[:SOBRE]->(p:Proposicao {id: propId})
+            WITH propId, v
+            ORDER BY v.data DESC, v.id DESC
+            RETURN propId, collect({
+                id: v.id,
+                data: v.data,
+                siglaOrgao: v.siglaOrgao,
+                aprovacao: v.aprovacao,
+                votosSim: coalesce(v.votosSim, 0),
+                votosNao: coalesce(v.votosNao, 0),
+                votosOutros: coalesce(v.votosOutros, 0),
+                descricao: v.descricao
+            }) AS votacoes
+            """,
+            ids=prop_ids,
+        )
+        mapa: dict[int, list[dict[str, Any]]] = {}
+        for r in rows:
+            lista = []
+            for v in r["votacoes"]:
+                sim = int(v["votosSim"] or 0)
+                nao = int(v["votosNao"] or 0)
+                total = sim + nao
+                v["pctSim"] = round((sim / total) * 100, 1) if total > 0 else None
+                lista.append(v)
+            mapa[int(r["propId"])] = lista
+        return {pid: mapa.get(pid, []) for pid in prop_ids}
+
     async def batch_orientacoes_por_votacoes(
         self, vot_ids: list[str]
     ) -> dict[str, list[dict[str, Any]]]:
@@ -418,7 +453,8 @@ class Neo4jGraphRepository:
               AND ($uf IS NULL OR d.uf = $uf)
               AND ($comunidade IS NULL OR d.comunidadeVoto = $comunidade)
               AND ($partido IS NULL OR EXISTS {
-                    MATCH (d)-[:FILIADO_A]->(p:Partido {sigla: $partido})
+                    MATCH (d)-[:FILIADO_A]->(p:Partido)
+                    WHERE toUpper(p.sigla) = $partido
                   })
         """
         params = {

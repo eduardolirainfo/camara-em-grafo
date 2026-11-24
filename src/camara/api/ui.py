@@ -149,14 +149,30 @@ def criar_ui_router(
         autores_map = (
             await repo.batch_autores_por_proposicoes([(i, 5) for i in ids]) if ids else {}
         )
+        votacoes_map = await repo.batch_votacoes_por_proposicoes(ids) if ids else {}
         for p in props:
             pid = int(p["id"])
             p["temas"] = temas_map.get(pid, [])
             p["autores"] = autores_map.get((pid, 5), [])
+            p["votacoes"] = votacoes_map.get(pid, [])
         return templates.TemplateResponse(
             request=request,
             name="partials/proposicoes_lista.html",
             context={"proposicoes": props, "texto": texto or ""},
+        )
+
+    @router.get("/partials/proposicao/{prop_id}/status", response_class=HTMLResponse)
+    async def partial_proposicao_status(request: Request, prop_id: int) -> HTMLResponse:
+        erro: str | None = None
+        status: dict[str, Any] = {}
+        try:
+            status = await ficha_service.obter_status_proposicao(prop_id)
+        except _API_ERROS:
+            erro = "Não foi possível consultar a tramitação atual na API da Câmara."
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/proposicao_status.html",
+            context={"status": status, "erro": erro},
         )
 
     @router.get("/partials/caminho", response_class=HTMLResponse)
@@ -258,8 +274,11 @@ def criar_ui_router(
         props = await repo.listar_proposicoes_de_deputado(dep_id, offset=0, limit=30)
         ids = [int(p["id"]) for p in props]
         temas_map = await repo.batch_temas_por_proposicoes(ids) if ids else {}
+        votacoes_map = await repo.batch_votacoes_por_proposicoes(ids) if ids else {}
         for p in props:
-            p["temas"] = temas_map.get(int(p["id"]), [])
+            pid = int(p["id"])
+            p["temas"] = temas_map.get(pid, [])
+            p["votacoes"] = votacoes_map.get(pid, [])
         return templates.TemplateResponse(
             request=request,
             name="partials/tab_proposicoes.html",

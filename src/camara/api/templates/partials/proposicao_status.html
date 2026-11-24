@@ -1,0 +1,21 @@
+{% if erro %}
+<div class="text-xs text-amber-400 mt-2">{{ erro }}</div>
+{% else %}
+<div class="mt-2.5 bg-slate-950/70 border border-slate-800 rounded-lg p-3 text-xs space-y-1">
+  <div class="flex flex-wrap items-center justify-between gap-2">
+    <span class="font-semibold text-emerald-300">Situação atual: {{ status.situacao }}</span>
+    <span class="text-slate-400">Órgão: <strong class="text-slate-200">{{ status.orgao }}</strong> · {{ status.data|data_br }}</span>
+  </div>
+  {% if status.regime and status.regime != '—' %}
+  <div class="text-slate-400">Regime: {{ status.regime }}</div>
+  {% endif %}
+  {% if status.despacho %}
+  <div class="text-slate-300 leading-relaxed">{{ status.despacho[:260] }}{% if status.despacho|length > 260 %}...{% endif %}</div>
+  {% endif %}
+  {% if status.urlInteiroTeor %}
+  <div class="pt-1">
+    <a href="{{ status.urlInteiroTeor }}" target="_blank" class="text-sky-400 hover:underline font-medium">Abrir texto completo do projeto (PDF) ↗</a>
+  </div>
+  {% endif %}
+</div>
+{% endif %}

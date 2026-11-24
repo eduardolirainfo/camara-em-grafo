@@ -95,6 +95,22 @@ class FichaDeputadoService:
             resp = await client.get_json(f"/deputados/{dep_id}")
             return dict(resp.get("dados") or {})
 
+    async def obter_status_proposicao(self, prop_id: int) -> dict[str, Any]:
+        """Retorna situação atual e inteiro teor de /proposicoes/{id} (com cache em disco)."""
+        async with self._criar_cliente() as client:
+            resp = await client.get_json(f"/proposicoes/{prop_id}")
+            dados = dict(resp.get("dados") or {})
+            status = dict(dados.get("statusProposicao") or {})
+            return {
+                "id": prop_id,
+                "situacao": status.get("descricaoSituacao") or status.get("descricaoTramitacao") or "Sem situação informada",
+                "orgao": status.get("siglaOrgao") or "—",
+                "data": status.get("dataHora") or "",
+                "regime": status.get("regime") or "—",
+                "despacho": status.get("despacho") or "",
+                "urlInteiroTeor": dados.get("urlInteiroTeor") or "",
+            }
+
     async def obter_despesas(self, dep_id: int, ano: int) -> dict[str, Any]:
         """Retorna despesas CEAP de um deputado em um ano, agregadas por categoria e fornecedor."""
         async with self._criar_cliente() as client:
