@@ -442,6 +442,10 @@ class Neo4jGraphRepository:
             "gastos_desc": "gastoTotalCeap DESC, d.nome ASC",
             "viagens_desc": "gastoViagens DESC, d.nome ASC",
             "divulgacao_desc": "gastoDivulgacao DESC, d.nome ASC",
+            "aeronaves_desc": "gastoAeronaves DESC, d.nome ASC",
+            "consultorias_desc": "gastoConsultorias DESC, d.nome ASC",
+            "concentracao_desc": "maiorFornecedorPct DESC, gastoTotalCeap DESC",
+            "custo_voto_desc": "custoPorVoto DESC, gastoTotalCeap DESC",
             "divergencia": "taxaDivergencia DESC, totalContra DESC, d.nome ASC",
             "presenca_asc": "taxaPresenca ASC, d.nome ASC",
             "presenca_desc": "taxaPresenca DESC, d.nome ASC",
@@ -490,7 +494,11 @@ class Neo4jGraphRepository:
                  coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,
                  coalesce(d.gastoViagens, 0.0) AS gastoViagens,
                  coalesce(d.gastoDivulgacao, 0.0) AS gastoDivulgacao,
-                 coalesce(d.numFuncionarios, 0) AS numFuncionarios
+                 coalesce(d.gastoAeronaves, 0.0) AS gastoAeronaves,
+                 coalesce(d.gastoConsultorias, 0.0) AS gastoConsultorias,
+                 coalesce(d.maiorFornecedorPct, 0.0) AS maiorFornecedorPct,
+                 coalesce(d.numFuncionarios, 0) AS numFuncionarios,
+                 CASE WHEN totalVotos >= 20 THEN round(coalesce(d.gastoTotalCeap, 0.0) / totalVotos, 2) ELSE 0.0 END AS custoPorVoto
             RETURN d.id AS id,
                    d.nome AS nome,
                    d.uf AS uf,
@@ -500,13 +508,18 @@ class Neo4jGraphRepository:
                    round(taxaDivergencia, 4) AS taxaDivergencia,
                    totalContra,
                    totalVotos,
+                   $totalVotacoes AS totalVotacoesNominais,
                    taxaPresenca,
                    partidos,
                    numPartidos,
                    gastoTotalCeap,
                    gastoViagens,
                    gastoDivulgacao,
-                   numFuncionarios
+                   gastoAeronaves,
+                   gastoConsultorias,
+                   maiorFornecedorPct,
+                   numFuncionarios,
+                   custoPorVoto
             ORDER BY {ordem_sql}
             SKIP $offset
             LIMIT $limit
@@ -531,6 +544,11 @@ class Neo4jGraphRepository:
                    coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,
                    coalesce(d.gastoViagens, 0.0) AS gastoViagens,
                    coalesce(d.gastoDivulgacao, 0.0) AS gastoDivulgacao,
+                   coalesce(d.gastoAeronaves, 0.0) AS gastoAeronaves,
+                   coalesce(d.gastoConsultorias, 0.0) AS gastoConsultorias,
+                   coalesce(d.maiorFornecedorNome, '') AS maiorFornecedorNome,
+                   coalesce(d.maiorFornecedorValor, 0.0) AS maiorFornecedorValor,
+                   coalesce(d.maiorFornecedorPct, 0.0) AS maiorFornecedorPct,
                    totalProposicoes, totalVotos,
                    [(d)-[:FILIADO_A]->(p:Partido) | {sigla: p.sigla, nome: p.nome, id: p.id}] AS partidos
             """,
@@ -613,3 +631,44 @@ class Neo4jGraphRepository:
             b=dep_b,
         )
         return rows[0] if rows else {"projetosEmComum": 0, "concordancia": None, "votacoesEmComum": 0}
+
+    async def buscar_fornecedores_ui(
+        self,
+        busca: str | None = None,
+        ordenar: str = "deputados_desc",
+        limit: int = 25,
+    ) -> list[dict[str, Any]]:
+        ordem_sql = {
+            "deputados_desc": "qtdDeputados DESC, f.totalRecebido DESC",
+            "valor_desc": "f.totalRecebido DESC, qtdDeputados DESC",
+        }.get(ordenar, "qtdDeputados DESC, f.totalRecebido DESC")
+
+        return await self._run(
+            f"""
+            MATCH (d:Deputado)-[r:PAGOU]->(f:Fornecedor)
+            WHERE $busca IS NULL
+               OR toLower(f.nome) CONTAINS toLower($busca)
+               OR f.cnpj CONTAINS $busca
+            WITH f, d, r
+            ORDER BY r.total DESC
+            WITH f, count(DISTINCT d) AS qtdDeputados,
+                 sum(r.total) AS totalGrafo,
+                 sum(r.notas) AS totalNotas,
+                 collect({{
+                     id: d.id, nome: d.nome, uf: d.uf,
+                     partidos: [(d)-[:FILIADO_A]->(p:Partido) | p.sigla],
+                     valor: round(r.total, 2),
+                     notas: r.notas
+                 }})[0..8] AS topDeputados
+            RETURN f.cnpj AS cnpj,
+                   f.nome AS nome,
+                   round(totalGrafo, 2) AS totalRecebido,
+                   totalNotas,
+                   qtdDeputados,
+                   topDeputados
+            ORDER BY {ordem_sql}
+            LIMIT $limit
+            """,
+            busca=busca.strip() if busca and busca.strip() else None,
+            limit=limit,
+        )

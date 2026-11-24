@@ -206,6 +206,21 @@ def criar_ui_router(
             context={"caminho": nos, "comparacao": comparacao},
         )
 
+    @router.get("/partials/fornecedores", response_class=HTMLResponse)
+    async def partial_fornecedores(
+        request: Request,
+        busca: str | None = None,
+        ordenar: str = "deputados_desc",
+    ) -> HTMLResponse:
+        fornecedores = await obter_repo().buscar_fornecedores_ui(
+            busca=busca, ordenar=ordenar, limit=25
+        )
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/fornecedores_lista.html",
+            context={"fornecedores": fornecedores, "busca": busca or ""},
+        )
+
     @router.get("/deputado/{dep_id}", response_class=HTMLResponse)
     async def ficha_deputado(request: Request, dep_id: int) -> HTMLResponse:
         repo = obter_repo()

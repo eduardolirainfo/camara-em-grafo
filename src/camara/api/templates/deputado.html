@@ -115,13 +115,30 @@
       {% if grp_dep %}{{ grp_dep.rotulo }}{% elif dep.comunidadeVoto is not none %}Grupo {{ dep.comunidadeVoto }}{% else %}—{% endif %}
     </div>
   </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5" title="Total gasto na Cota Parlamentar (CEAP) nos anos carregados">
+  <div class="tip-wrap bg-slate-900 border border-slate-800 rounded-xl p-3.5">
     <div class="text-xs text-slate-400">Gasto Cota (2023–26)</div>
     <div class="text-lg font-bold text-emerald-400 mt-0.5">{{ dep.gastoTotalCeap|brl_curto }}</div>
+    {% if (dep.maiorFornecedorPct or 0) > 0 %}
+    <div class="text-[11px] text-slate-400 mt-0.5">Top 1 empresa: <strong class="text-amber-300">{{ dep.maiorFornecedorPct|pct }}</strong></div>
+    {% endif %}
+    <div class="tip-box">
+      Total CEAP: <strong>{{ dep.gastoTotalCeap|brl }}</strong>.<br>
+      Maior fornecedor: {{ dep.maiorFornecedorNome or '—' }} ({{ dep.maiorFornecedorValor|brl }}).
+    </div>
   </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5" title="Passagens, hospedagem, veículos e combustíveis pagos pela Cota">
-    <div class="text-xs text-slate-400">Viagens e Desloc.</div>
+  <div class="tip-wrap bg-slate-900 border border-slate-800 rounded-xl p-3.5">
+    <div class="text-xs text-slate-400">Viagens / Aeronaves</div>
     <div class="text-lg font-bold text-sky-400 mt-0.5">{{ dep.gastoViagens|brl_curto }}</div>
+    {% if (dep.gastoAeronaves or 0) > 0 %}
+    <div class="text-[11px] text-amber-300 mt-0.5">Aeronaves: {{ dep.gastoAeronaves|brl_curto }}</div>
+    {% elif (dep.gastoConsultorias or 0) > 0 %}
+    <div class="text-[11px] text-slate-400 mt-0.5">Consultorias: {{ dep.gastoConsultorias|brl_curto }}</div>
+    {% endif %}
+    <div class="tip-box">
+      Viagens: <strong>{{ dep.gastoViagens|brl }}</strong><br>
+      Fretamento de aeronaves: <strong>{{ dep.gastoAeronaves|brl }}</strong><br>
+      Consultorias: <strong>{{ dep.gastoConsultorias|brl }}</strong>
+    </div>
   </div>
   <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
     <div class="text-xs text-slate-400">Projetos Assinados</div>

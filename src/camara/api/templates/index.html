@@ -44,6 +44,13 @@
     class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700">
     Conexão entre Deputados
   </button>
+  <button type="button" onclick="mostrarPainel('fornecedores')" id="btn-fornecedores"
+    hx-get="/ui/partials/fornecedores?ordenar=deputados_desc"
+    hx-target="#fornecedores-resultado"
+    hx-trigger="click once"
+    class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700">
+    Empresas &amp; Fornecedores (CNPJs)
+  </button>
 </div>
 
 <!-- Painel 1: Deputados -->
@@ -95,6 +102,10 @@
         <option value="gastos_desc">Maior gasto na Cota (R$)</option>
         <option value="viagens_desc">Maior gasto com viagens (R$)</option>
         <option value="divulgacao_desc">Maior gasto com divulgação (R$)</option>
+        <option value="aeronaves_desc">Maior gasto com aeronaves/jatinhos (R$)</option>
+        <option value="consultorias_desc">Maior gasto com consultorias (R$)</option>
+        <option value="concentracao_desc">Maior concentração em 1 empresa (%)</option>
+        <option value="custo_voto_desc">Maior custo por voto (R$/voto)</option>
         <option value="presenca_asc">Menor presença em votações (%)</option>
         <option value="divergencia">Mais contra o próprio partido (%)</option>
         <option value="funcionarios_desc">Maior equipe no gabinete</option>
@@ -194,9 +205,33 @@
   </div>
 </section>
 
+<!-- Painel 4: Rede de Empresas & Fornecedores (CNPJs) -->
+<section id="painel-fornecedores" class="hidden">
+  <form hx-get="/ui/partials/fornecedores"
+        hx-target="#fornecedores-resultado"
+        hx-trigger="submit, change from:select, keyup changed delay:300ms from:input[name='busca']"
+        hx-indicator="#loading-forn"
+        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+    <div class="md:col-span-2">
+      <label class="block text-xs text-slate-400 mb-1">Buscar empresa por nome ou CNPJ (somente números)</label>
+      <input type="text" name="busca" placeholder="Ex.: TAM, GOL, Locadora, 02012862000160..."
+             class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white" />
+    </div>
+    <div>
+      <label class="block text-xs text-slate-400 mb-1">Ordenar empresas por</label>
+      <select name="ordenar" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white">
+        <option value="deputados_desc">Mais deputados atendidos (rede compartilhada)</option>
+        <option value="valor_desc">Maior valor total recebido (R$)</option>
+      </select>
+    </div>
+  </form>
+  <div id="loading-forn" class="htmx-indicator text-sm text-emerald-400 mb-3">Consultando rede de fornecedores no Neo4j...</div>
+  <div id="fornecedores-resultado" class="text-sm text-slate-400">Carregando fornecedores...</div>
+</section>
+
 <script>
 function mostrarPainel(nome) {
-  ['deputados', 'proposicoes', 'caminho'].forEach(p => {
+  ['deputados', 'proposicoes', 'caminho', 'fornecedores'].forEach(p => {
     document.getElementById('painel-' + p).classList.toggle('hidden', p !== nome);
     const btn = document.getElementById('btn-' + p);
     if (p === nome) {

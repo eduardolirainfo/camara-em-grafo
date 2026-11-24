@@ -9,6 +9,18 @@
   <style>
     .htmx-indicator { display: none; }
     .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: inline-flex; }
+    .tip-wrap { position: relative; }
+    .tip-box {
+      visibility: hidden; opacity: 0; pointer-events: none;
+      position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+      width: 220px; z-index: 50;
+      background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
+      border-radius: 0.5rem; padding: 0.45rem 0.6rem;
+      font-size: 11px; line-height: 1.35; text-align: left; font-weight: 400;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6);
+      transition: opacity 0.12s ease;
+    }
+    .tip-wrap:hover .tip-box { visibility: visible; opacity: 1; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">

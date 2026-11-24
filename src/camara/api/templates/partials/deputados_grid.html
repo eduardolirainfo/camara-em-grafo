@@ -56,26 +56,39 @@
       </div>
     </div>
 
-    <!-- Indicadores objetivos de fiscalização -->
+    <!-- Indicadores objetivos de fiscalização (com tooltip instantâneo ao passar o mouse) -->
     <div class="grid grid-cols-2 gap-1.5 pt-2.5 border-t border-slate-800/80 text-center text-[11px]">
-      <div class="bg-slate-950/60 rounded-lg py-1" title="Total gasto na Cota Parlamentar (CEAP) de 2023 a 2026">
+      <div class="tip-wrap bg-slate-950/60 rounded-lg py-1">
         <div class="text-slate-500">Gasto Cota</div>
         <div class="font-semibold text-emerald-400">{{ d.gastoTotalCeap|brl_curto }}</div>
+        <div class="tip-box">
+          <strong>Cota Parlamentar (CEAP):</strong> total líquido gasto pelo deputado entre 2023 e 2026 ({{ d.gastoTotalCeap|brl }}).
+          {% if (d.maiorFornecedorPct or 0) > 0 %}<br>Maior fornecedor: <strong>{{ d.maiorFornecedorPct|pct }}</strong> do total.{% endif %}
+        </div>
       </div>
-      <div class="bg-slate-950/60 rounded-lg py-1" title="Gastos com passagens, hospedagem, combustíveis e locação de veículos (2023–2026)">
+      <div class="tip-wrap bg-slate-950/60 rounded-lg py-1">
         <div class="text-slate-500">Viagens</div>
         <div class="font-semibold text-sky-300">{{ d.gastoViagens|brl_curto }}</div>
+        <div class="tip-box">
+          <strong>Viagens e deslocamento:</strong> soma de passagens aéreas, hospedagem, combustíveis, táxi/pedágio e locação de veículos/aeronaves ({{ d.gastoViagens|brl }}).
+        </div>
       </div>
-      <div class="bg-slate-950/60 rounded-lg py-1" title="Percentual de votações nominais em que o deputado registrou voto">
+      <div class="tip-wrap bg-slate-950/60 rounded-lg py-1">
         <div class="text-slate-500">Presença</div>
         <div class="font-semibold {% if (d.taxaPresenca or 0) < 0.4 %}text-rose-400{% else %}text-slate-200{% endif %}">
           {{ d.taxaPresenca|pct }}
         </div>
+        <div class="tip-box">
+          <strong>Presença em votações nominais:</strong> registrou voto em <strong>{{ d.totalVotos or 0 }}</strong> de {{ d.totalVotacoesNominais or 1613 }} votações (2023–2026). Presidentes da Câmara e suplentes têm percentual menor.
+        </div>
       </div>
-      <div class="bg-slate-950/60 rounded-lg py-1" title="Percentual de votos contra a orientação do próprio partido">
+      <div class="tip-wrap bg-slate-950/60 rounded-lg py-1">
         <div class="text-slate-500">Contra Part.</div>
         <div class="font-semibold {% if (d.taxaDivergencia or 0) >= 0.3 %}text-amber-400{% else %}text-slate-200{% endif %}">
           {{ d.taxaDivergencia|pct }}
+        </div>
+        <div class="tip-box">
+          <strong>Votos contra o próprio partido:</strong> percentual de vezes em que votou diferente da orientação oficial do partido na data ({{ d.totalContra or 0 }} voto(s) divergente(s)).
         </div>
       </div>
     </div>
