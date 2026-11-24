@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+dist/
+build/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+
+# Segredos e configuração local
+.env
+
+# Notas pessoais (não sobem para o GitHub)
+PROJETO.md
+DIARIO.md
+
+# Cache local da API e dados do Neo4j
+cache/
+data/
+
+# IDEs / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
