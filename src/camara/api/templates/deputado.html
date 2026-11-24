@@ -150,12 +150,20 @@
     </div>
   </div>
   <div class="border-r border-b border-rule p-3.5">
-    <div class="micro">Projetos Assinados</div>
+    <div class="micro">Projetos (Aprov. / Vot.)</div>
     <div class="num text-xl font-semibold text-ink mt-1">{{ dep.totalProposicoes }}</div>
+    <div class="text-[11px] font-mono text-muted mt-0.5">
+      <strong class="text-civic">{{ dep.projetosAprovados or 0 }}</strong> aprov. · {{ dep.projetosVotados or 0 }} vot.
+    </div>
   </div>
   <div class="border-r border-b border-rule p-3.5">
-    <div class="micro">Votos em Plenário</div>
+    <div class="micro">Votos / HHI Fornec.</div>
     <div class="num text-xl font-semibold text-ink mt-1">{{ dep.totalVotos }}</div>
+    {% if (dep.hhiFornecedores or 0) > 0 %}
+    <div class="text-[11px] font-mono mt-0.5 {% if dep.hhiFornecedores >= 2500 %}text-signal font-semibold{% else %}text-muted{% endif %}">
+      HHI: {{ dep.hhiFornecedores }}
+    </div>
+    {% endif %}
   </div>
   <div class="border-r border-b border-rule p-3.5">
     <div class="micro">Equipe no Gabinete</div>

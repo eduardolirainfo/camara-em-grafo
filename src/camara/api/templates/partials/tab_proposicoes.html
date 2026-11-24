@@ -1,8 +1,44 @@
-<div class="space-y-3">
-  <div class="micro">Exibindo até 30 projetos mais recentes (PL, PLP, PEC, PDL e PRC)</div>
+<div class="space-y-4">
+  <!-- Subfiltros de Projetos do Deputado -->
+  <form hx-get="/ui/deputado/{{ dep_id }}/tab/proposicoes"
+        hx-target="#tab-conteudo"
+        hx-trigger="change from:select"
+        hx-indicator="#tab-loading"
+        class="bg-white border border-rule p-3.5 grid grid-cols-1 sm:grid-cols-3 gap-3">
+    <div>
+      <label class="micro block mb-1">Resultado em Plenário</label>
+      <select name="resultado" class="w-full min-h-[38px] bg-paper border border-rule px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-ink">
+        <option value="" {% if not resultado %}selected{% endif %}>Todos os projetos</option>
+        <option value="aprovados" {% if resultado == 'aprovados' %}selected{% endif %}>Aprovados em plenário</option>
+        <option value="rejeitados" {% if resultado == 'rejeitados' %}selected{% endif %}>Rejeitados em plenário</option>
+        <option value="votados" {% if resultado == 'votados' %}selected{% endif %}>Qualquer votação nominal</option>
+        <option value="sem_votacao" {% if resultado == 'sem_votacao' %}selected{% endif %}>Sem votação nominal</option>
+      </select>
+    </div>
+    <div>
+      <label class="micro block mb-1">Tipo de Projeto</label>
+      <select name="tipo" class="w-full min-h-[38px] bg-paper border border-rule px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-ink">
+        <option value="" {% if not tipo %}selected{% endif %}>Todos os tipos</option>
+        {% for t in ['PL', 'PLP', 'PEC', 'PDL', 'PRC'] %}
+        <option value="{{ t }}" {% if tipo == t %}selected{% endif %}>{{ t }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="micro block mb-1">Ordenar por</label>
+      <select name="ordenar" class="w-full min-h-[38px] bg-paper border border-rule px-2.5 py-1.5 text-xs text-ink focus:outline-none focus:border-ink">
+        <option value="recentes" {% if ordenar == 'recentes' %}selected{% endif %}>Mais recentes</option>
+        <option value="antigos" {% if ordenar == 'antigos' %}selected{% endif %}>Mais antigos</option>
+        <option value="mais_votados" {% if ordenar == 'mais_votados' %}selected{% endif %}>Mais votados em plenário</option>
+      </select>
+    </div>
+  </form>
+
+  <div class="micro">Exibindo <strong class="text-ink">{{ proposicoes|length }}</strong> projeto(s) (até 40 itens)</div>
+
   {% if not proposicoes %}
   <div class="bg-white border border-rule p-6 text-center text-sm text-muted">
-    Nenhum projeto vinculado a este deputado no período carregado.
+    Nenhum projeto encontrado com os subfiltros selecionados.
   </div>
   {% else %}
   {% for p in proposicoes %}

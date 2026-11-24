@@ -220,9 +220,11 @@ def criar_ui_router(
         request: Request,
         busca: str | None = None,
         ordenar: str = "deputados_desc",
+        ocultar_comuns: str | None = None,
     ) -> HTMLResponse:
+        ocultar = str(ocultar_comuns or "").lower() in {"1", "true", "on", "sim"}
         fornecedores = await obter_repo().buscar_fornecedores_ui(
-            busca=busca, ordenar=ordenar, limit=25
+            busca=busca, ordenar=ordenar, ocultar_comuns=ocultar, limit=25
         )
         return templates.TemplateResponse(
             request=request,
@@ -334,9 +336,20 @@ def criar_ui_router(
         )
 
     @router.get("/deputado/{dep_id}/tab/proposicoes", response_class=HTMLResponse)
-    async def tab_proposicoes(request: Request, dep_id: int) -> HTMLResponse:
+    async def tab_proposicoes(
+        request: Request,
+        dep_id: int,
+        tipo: str | None = None,
+        resultado: str | None = None,
+        ordenar: str = "recentes",
+    ) -> HTMLResponse:
         repo = obter_repo()
-        props = await repo.listar_proposicoes_de_deputado(dep_id, offset=0, limit=30)
+        if hasattr(repo, "listar_proposicoes_de_deputado_filtrado"):
+            props = await repo.listar_proposicoes_de_deputado_filtrado(
+                dep_id, tipo=tipo, resultado=resultado, ordenar=ordenar, limit=40
+            )
+        else:
+            props = await repo.listar_proposicoes_de_deputado(dep_id, offset=0, limit=40)
         ids = [int(p["id"]) for p in props]
         temas_map = await repo.batch_temas_por_proposicoes(ids) if ids else {}
         votacoes_map = await repo.batch_votacoes_por_proposicoes(ids) if ids else {}
@@ -347,7 +360,13 @@ def criar_ui_router(
         return templates.TemplateResponse(
             request=request,
             name="partials/tab_proposicoes.html",
-            context={"proposicoes": props, "dep_id": dep_id},
+            context={
+                "proposicoes": props,
+                "dep_id": dep_id,
+                "tipo": (tipo or "").upper(),
+                "resultado": (resultado or "").lower(),
+                "ordenar": ordenar,
+            },
         )
 
     @router.get("/deputado/{dep_id}/tab/atuacao", response_class=HTMLResponse)

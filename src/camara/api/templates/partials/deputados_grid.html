@@ -66,6 +66,59 @@
       </div>
     </div>
 
+    <!-- Selos objetivos em SVG (indicadores auditáveis, sem estrelas subjetivas) -->
+    {% set ratio_uf = d.get('gastoVsMedianaUf') %}
+    {% set tem_hhi = (d.get('hhiFornecedores') or 0) >= 2500 or (d.get('maiorFornecedorPct') or 0) >= 0.40 %}
+    {% set acima_uf = ratio_uf is not none and ratio_uf >= 1.15 %}
+    {% set econ_uf = ratio_uf is not none and ratio_uf <= 0.65 and (d.get('diasEmExercicio') or 0) >= 180 %}
+    {% set baixa_pres = (d.get('taxaPresenca') or 0) < 0.50 and (d.get('votacoesNoPeriodo') or 0) >= 50 %}
+    {% set alta_pres = (d.get('taxaPresenca') or 0) >= 0.85 and (d.get('votacoesNoPeriodo') or 0) >= 50 %}
+    {% set usou_aero = (d.get('gastoAeronaves') or 0) > 0 %}
+    {% if tem_hhi or acima_uf or econ_uf or baixa_pres or alta_pres or usou_aero %}
+    <div class="flex flex-wrap gap-1.5">
+      {% if tem_hhi %}
+      <span class="tip-wrap inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-50 border border-signal text-signal font-mono text-[10px]">
+        <svg class="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6"/><path d="M8 2v6l4.5 3.5"/></svg>
+        HHI {{ d.hhiFornecedores or 0 }}
+        <span class="tip-box"><strong>Alta concentração de fornecedores:</strong> Índice HHI = <strong>{{ d.hhiFornecedores or 0 }}</strong> (limiar CADE ≥ 2.500) e maior empresa recebe <strong>{{ d.maiorFornecedorPct|pct }}</strong> da cota.</span>
+      </span>
+      {% endif %}
+      {% if acima_uf %}
+      <span class="tip-wrap inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 border border-ochre text-ochre font-mono text-[10px]">
+        <svg class="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 11l4-4 3 2 4-5"/><path d="M10 4h4v4"/></svg>
+        +{{ ((d.gastoVsMedianaUf - 1) * 100)|round(0)|int }}% UF
+        <span class="tip-box"><strong>Acima da mediana da UF:</strong> gasto diário em exercício está <strong>{{ ((d.gastoVsMedianaUf - 1) * 100)|round(1) }}%</strong> acima da mediana dos deputados de {{ d.uf }}.</span>
+      </span>
+      {% elif econ_uf %}
+      <span class="tip-wrap inline-flex items-center gap-1 px-1.5 py-0.5 bg-paper border border-civic text-civic font-mono text-[10px]">
+        <svg class="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 5l4 4 3-2 4 5"/><path d="M10 12h4V8"/></svg>
+        Economia UF
+        <span class="tip-box"><strong>Gasto contido frente à UF:</strong> gasto diário em exercício está <strong>{{ ((1 - d.gastoVsMedianaUf) * 100)|round(1) }}%</strong> abaixo da mediana de {{ d.uf }}.</span>
+      </span>
+      {% endif %}
+      {% if usou_aero %}
+      <span class="tip-wrap inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-50 border border-signal text-signal font-mono text-[10px]">
+        <svg class="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2 9l12-5-4 10-2-4-6-1z"/></svg>
+        Aeronaves
+        <span class="tip-box"><strong>Fretamento de aeronaves:</strong> gastou <strong>{{ d.gastoAeronaves|brl }}</strong> com locação/fretamento de aeronaves na Cota Parlamentar.</span>
+      </span>
+      {% endif %}
+      {% if baixa_pres %}
+      <span class="tip-wrap inline-flex items-center gap-1 px-1.5 py-0.5 bg-red-50 border border-signal text-signal font-mono text-[10px]">
+        <svg class="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="8" cy="8" r="6"/><path d="M8 5v3.5l2.5 1.5"/></svg>
+        Baixa presença
+        <span class="tip-box"><strong>Presença abaixo de 50%:</strong> votou em {{ d.totalVotos }} de {{ d.votacoesNoPeriodo }} votações enquanto estava em exercício.</span>
+      </span>
+      {% elif alta_pres %}
+      <span class="tip-wrap inline-flex items-center gap-1 px-1.5 py-0.5 bg-paper border border-civic text-civic font-mono text-[10px]">
+        <svg class="w-3 h-3 shrink-0" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 8.5l3.5 3.5L13 5"/></svg>
+        Alta presença
+        <span class="tip-box"><strong>Presença ≥ 85%:</strong> votou em {{ d.totalVotos }} de {{ d.votacoesNoPeriodo }} votações enquanto estava em exercício.</span>
+      </span>
+      {% endif %}
+    </div>
+    {% endif %}
+
     <!-- Grade de 4 indicadores com linhas finas suíças -->
     <div class="grid grid-cols-2 border-t border-l border-rule mt-auto text-left">
       <div class="tip-wrap border-r border-b border-rule px-2.5 py-1.5 bg-paper/60">

@@ -44,23 +44,90 @@
     </div>
   </div>
 
-  <!-- Discursos Recentes -->
+  <!-- Discursos Recentes com Leitor em Modal -->
   <div class="bg-white border border-rule p-4">
     <h2 class="font-bold text-ink text-sm pb-2.5 mb-3 border-b-2 border-ink">Discursos Recentes em Plenário (<span class="num">{{ atuacao.discursos|length }}</span>)</h2>
     {% if not atuacao.discursos %}
     <p class="text-xs text-muted">Sem discursos recentes registrados na API.</p>
     {% else %}
     <div class="divide-y divide-rule">
-      {% for disc in atuacao.discursos[:10] %}
-      <div class="py-3 text-xs">
-        <div class="flex flex-wrap justify-between gap-2 font-mono text-muted mb-1">
+      {% for disc in atuacao.discursos[:15] %}
+      {% set texto_completo = disc.transcricao or disc.sumario or 'Sem transcrição disponível.' %}
+      <div class="py-3.5 text-xs">
+        <div class="flex flex-wrap items-center justify-between gap-2 font-mono text-muted mb-1.5">
           <span class="font-semibold text-ink uppercase">{{ disc.tipoDiscurso or 'Discurso' }}</span>
           <span>{{ disc.dataHoraInicio|data_br }}</span>
         </div>
-        <p class="text-ink leading-relaxed">{{ disc.sumario or (disc.transcricao[:350] ~ '...') if disc.transcricao else 'Sem sumário disponível.' }}</p>
+        <p class="text-sm text-ink leading-relaxed">
+          {{ disc.sumario or (texto_completo[:340] ~ ('...' if texto_completo|length > 340 else '')) }}
+        </p>
+        {% if disc.transcricao %}
+        <div class="mt-2.5 flex flex-wrap items-center gap-3">
+          <button type="button"
+                  onclick="abrirModalDiscurso(this)"
+                  data-titulo="{{ (disc.tipoDiscurso or 'Discurso em Plenário')|e }}"
+                  data-data="{{ (disc.dataHoraInicio|data_br)|e }}"
+                  data-fase="{{ ((disc.faseEvento or {}).get('titulo') or '')|e }}"
+                  data-texto="{{ texto_completo|e }}"
+                  class="px-3 py-1.5 border border-ink bg-paper hover:bg-ink hover:text-paper font-mono text-[11px] uppercase tracking-[0.06em] text-ink transition-colors">
+            Ler discurso completo
+          </button>
+          {% if disc.urlTexto %}
+          <a href="{{ disc.urlTexto }}" target="_blank" class="font-mono text-[11px] text-cobalt underline underline-offset-2 hover:text-signal">
+            Texto oficial ↗
+          </a>
+          {% endif %}
+        </div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>
     {% endif %}
   </div>
 </div>
+
+<!-- Modal Editorial de Leitura de Discurso -->
+<div id="modal-discurso"
+     onclick="if(event.target === this) fecharModalDiscurso()"
+     class="hidden fixed inset-0 z-50 bg-black/70 p-4 sm:p-6 flex items-center justify-center">
+  <div class="bg-white border-2 border-ink w-full max-w-2xl max-h-[85vh] flex flex-col">
+    <div class="flex items-start justify-between gap-4 p-4 sm:p-5 border-b-2 border-ink bg-paper">
+      <div>
+        <div id="md-meta" class="micro"></div>
+        <h3 id="md-titulo" class="text-lg font-extrabold text-ink tracking-[-0.02em] mt-1"></h3>
+      </div>
+      <button type="button" onclick="fecharModalDiscurso()"
+              class="px-2.5 py-1 border border-ink bg-white hover:bg-signal hover:text-white hover:border-signal font-mono text-xs uppercase">
+        Fechar [ESC]
+      </button>
+    </div>
+    <div class="p-5 sm:p-7 overflow-y-auto flex-1">
+      <article id="md-texto" class="text-[16px] sm:text-[17px] leading-[1.85] text-ink whitespace-pre-line font-sans"></article>
+    </div>
+  </div>
+</div>
+
+<script>
+function abrirModalDiscurso(btn) {
+  const modal = document.getElementById('modal-discurso');
+  if (!modal) return;
+  const titulo = btn.getAttribute('data-titulo') || 'Discurso';
+  const data = btn.getAttribute('data-data') || '';
+  const fase = btn.getAttribute('data-fase') || '';
+  const texto = btn.getAttribute('data-texto') || '';
+  document.getElementById('md-titulo').textContent = titulo;
+  document.getElementById('md-meta').textContent = [data, fase].filter(Boolean).join(' · ');
+  document.getElementById('md-texto').textContent = texto;
+  modal.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+}
+function fecharModalDiscurso() {
+  const modal = document.getElementById('modal-discurso');
+  if (!modal) return;
+  modal.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') fecharModalDiscurso();
+});
+</script>

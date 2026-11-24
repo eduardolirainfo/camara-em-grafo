@@ -286,10 +286,25 @@ class FichaDeputadoService:
                 f"/deputados/{dep_id}/discursos",
                 params={"itens": 20, "ordem": "DESC", "ordenarPor": "dataHoraInicio"},
             )
+        discursos_limpos = []
+        for disc in list(discursos_resp.get("dados") or []):
+            d_copy = dict(disc)
+            for campo in ("sumario", "transcricao", "keywords"):
+                if isinstance(d_copy.get(campo), str):
+                    d_copy[campo] = (
+                        d_copy[campo]
+                        .replace("\x91", "'")
+                        .replace("\x92", "'")
+                        .replace("\x93", '"')
+                        .replace("\x94", '"')
+                        .replace("\x96", "–")
+                        .replace("\x97", "—")
+                    )
+            discursos_limpos.append(d_copy)
         return {
             "frentes": list(frentes_resp.get("dados") or []),
             "orgaos": list(orgaos_resp.get("dados") or []),
-            "discursos": list(discursos_resp.get("dados") or []),
+            "discursos": discursos_limpos,
         }
 
     async def obter_carreira(self, dep_id: int) -> dict[str, Any]:

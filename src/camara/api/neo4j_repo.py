@@ -446,7 +446,10 @@ class Neo4jGraphRepository:
             "aeronaves_desc": "gastoAeronaves DESC, d.nome ASC",
             "consultorias_desc": "gastoConsultorias DESC, d.nome ASC",
             "concentracao_desc": "maiorFornecedorPct DESC, gastoTotalCeap DESC",
+            "hhi_desc": "hhiFornecedores DESC, gastoTotalCeap DESC",
+            "gasto_uf_desc": "coalesce(gastoVsMedianaUf, 0.0) DESC, gastoTotalCeap DESC",
             "custo_voto_desc": "custoPorVoto DESC, gastoTotalCeap DESC",
+            "aprovados_desc": "projetosAprovados DESC, projetosVotados DESC, d.nome ASC",
             "divergencia": "taxaDivergencia DESC, totalContra DESC, d.nome ASC",
             "presenca_asc": "taxaPresenca ASC, d.nome ASC",
             "presenca_desc": "taxaPresenca DESC, d.nome ASC",
@@ -539,6 +542,10 @@ class Neo4jGraphRepository:
                  coalesce(d.gastoAeronaves, 0.0) AS gastoAeronaves,
                  coalesce(d.gastoConsultorias, 0.0) AS gastoConsultorias,
                  coalesce(d.maiorFornecedorPct, 0.0) AS maiorFornecedorPct,
+                 coalesce(d.hhiFornecedores, 0) AS hhiFornecedores,
+                 d.gastoVsMedianaUf AS gastoVsMedianaUf,
+                 coalesce(d.projetosVotados, 0) AS projetosVotados,
+                 coalesce(d.projetosAprovados, 0) AS projetosAprovados,
                  coalesce(d.numFuncionarios, 0) AS numFuncionarios,
                  coalesce(d.teveLicencaCargo, false) AS teveLicencaCargo,
                  coalesce(d.diasEmExercicio, 0) AS diasEmExercicio,
@@ -568,6 +575,10 @@ class Neo4jGraphRepository:
                    gastoAeronaves,
                    gastoConsultorias,
                    maiorFornecedorPct,
+                   hhiFornecedores,
+                   gastoVsMedianaUf,
+                   projetosVotados,
+                   projetosAprovados,
                    numFuncionarios,
                    custoPorVoto
             ORDER BY {ordem_sql}
@@ -600,6 +611,13 @@ class Neo4jGraphRepository:
                    coalesce(d.maiorFornecedorNome, '') AS maiorFornecedorNome,
                    coalesce(d.maiorFornecedorValor, 0.0) AS maiorFornecedorValor,
                    coalesce(d.maiorFornecedorPct, 0.0) AS maiorFornecedorPct,
+                   coalesce(d.hhiFornecedores, 0) AS hhiFornecedores,
+                   d.gastoVsMedianaUf AS gastoVsMedianaUf,
+                   coalesce(d.projetosVotados, 0) AS projetosVotados,
+                   coalesce(d.projetosAprovados, 0) AS projetosAprovados,
+                   coalesce(d.votacoesAtivo, 0) AS votacoesAtivo,
+                   coalesce(d.diasEmExercicio, 0) AS diasEmExercicio,
+                   coalesce(d.teveLicencaCargo, false) AS teveLicencaCargo,
                    totalProposicoes, totalVotos,
                    [(d)-[:FILIADO_A]->(p:Partido) | {sigla: p.sigla, nome: p.nome, id: p.id}] AS partidos
             """,
@@ -687,6 +705,7 @@ class Neo4jGraphRepository:
         self,
         busca: str | None = None,
         ordenar: str = "deputados_desc",
+        ocultar_comuns: bool = False,
         limit: int = 25,
     ) -> list[dict[str, Any]]:
         ordem_sql = {
@@ -694,12 +713,30 @@ class Neo4jGraphRepository:
             "valor_desc": "f.totalRecebido DESC, qtdDeputados DESC",
         }.get(ordenar, "qtdDeputados DESC, f.totalRecebido DESC")
 
+        filtro_comuns = ""
+        if ocultar_comuns:
+            filtro_comuns = """
+              AND NOT (
+                toLower(f.nome) CONTAINS 'tam ' OR toLower(f.nome) CONTAINS 'latam'
+                OR toLower(f.nome) CONTAINS 'gol ' OR toLower(f.nome) CONTAINS 'azul '
+                OR toLower(f.nome) CONTAINS 'cia aerea' OR toLower(f.nome) CONTAINS 'linhas aereas'
+                OR toLower(f.nome) CONTAINS 'claro' OR toLower(f.nome) CONTAINS 'vivo'
+                OR toLower(f.nome) CONTAINS 'telefonica' OR toLower(f.nome) CONTAINS 'tim s'
+                OR toLower(f.nome) CONTAINS 'correios' OR toLower(f.nome) CONTAINS 'uber'
+                OR toLower(f.nome) CONTAINS '99 tecnologia' OR toLower(f.nome) CONTAINS 'posto '
+                OR toLower(f.nome) CONTAINS 'combustiv' OR toLower(f.nome) CONTAINS 'auto posto'
+                OR toLower(f.nome) CONTAINS 'celulares' OR toLower(f.nome) CONTAINS 'telefonia'
+                OR toLower(f.nome) CONTAINS 'movida' OR toLower(f.nome) CONTAINS 'localiza'
+              )
+            """
+
         return await self._run(
             f"""
             MATCH (d:Deputado)-[r:PAGOU]->(f:Fornecedor)
-            WHERE $busca IS NULL
+            WHERE ($busca IS NULL
                OR toLower(f.nome) CONTAINS toLower($busca)
-               OR f.cnpj CONTAINS $busca
+               OR f.cnpj CONTAINS $busca)
+            {filtro_comuns}
             WITH f, d, r
             ORDER BY r.total DESC
             WITH f, count(DISTINCT d) AS qtdDeputados,
@@ -721,5 +758,52 @@ class Neo4jGraphRepository:
             LIMIT $limit
             """,
             busca=busca.strip() if busca and busca.strip() else None,
+            limit=limit,
+        )
+
+    async def listar_proposicoes_de_deputado_filtrado(
+        self,
+        dep_id: int,
+        tipo: str | None = None,
+        resultado: str | None = None,
+        ordenar: str = "recentes",
+        limit: int = 40,
+    ) -> list[dict[str, Any]]:
+        ordem_sql = {
+            "recentes": "p.ano DESC, coalesce(p.dataApresentacao, '') DESC, p.id DESC",
+            "antigos": "p.ano ASC, coalesce(p.dataApresentacao, '') ASC, p.id ASC",
+            "mais_votados": "qtdVotacoes DESC, p.ano DESC, p.id DESC",
+        }.get(ordenar, "p.ano DESC, coalesce(p.dataApresentacao, '') DESC, p.id DESC")
+
+        filtro_res = {
+            "votados": "AND qtdVotacoes > 0",
+            "aprovados": "AND qtdAprovacoes > 0",
+            "rejeitados": "AND qtdRejeicoes > 0",
+            "sem_votacao": "AND qtdVotacoes = 0",
+        }.get((resultado or "").strip().lower(), "")
+
+        return await self._run(
+            f"""
+            MATCH (d:Deputado {{id: $id}})-[:AUTOR_DE]->(p:Proposicao)
+            WHERE ($tipo IS NULL OR p.siglaTipo = $tipo)
+            OPTIONAL MATCH (v:Votacao)-[:SOBRE]->(p)
+            WITH p,
+                 count(DISTINCT v) AS qtdVotacoes,
+                 count(DISTINCT CASE WHEN v.aprovacao = true THEN v END) AS qtdAprovacoes,
+                 count(DISTINCT CASE WHEN v.aprovacao = false THEN v END) AS qtdRejeicoes
+            WHERE true {filtro_res}
+            RETURN p.id AS id,
+                   p.siglaTipo AS siglaTipo,
+                   p.numero AS numero,
+                   p.ano AS ano,
+                   p.ementa AS ementa,
+                   p.dataApresentacao AS dataApresentacao,
+                   p.uri AS uri,
+                   qtdVotacoes
+            ORDER BY {ordem_sql}
+            LIMIT $limit
+            """,
+            id=dep_id,
+            tipo=tipo.strip().upper() if tipo and tipo.strip() else None,
             limit=limit,
         )

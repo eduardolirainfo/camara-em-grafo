@@ -126,12 +126,15 @@
         <option value="divulgacao_desc">Maior gasto com divulgação (R$)</option>
         <option value="aeronaves_desc">Maior gasto com aeronaves (R$)</option>
         <option value="consultorias_desc">Maior gasto com consultorias (R$)</option>
+        <option value="hhi_desc">Maior concentração HHI (fornecedores)</option>
+        <option value="gasto_uf_desc">Mais acima da mediana da UF</option>
         <option value="concentracao_desc">Maior concentração em 1 empresa (%)</option>
         <option value="custo_voto_desc">Maior custo por voto (R$/voto)</option>
         <option value="presenca_asc">Menor presença em votações (%)</option>
         <option value="divergencia">Mais contra o próprio partido (%)</option>
         <option value="funcionarios_desc">Maior equipe no gabinete</option>
         <option value="trocas">Mais trocas de partido</option>
+        <option value="aprovados_desc">Mais projetos aprovados em plenário</option>
         <option value="presenca_desc">Maior presença em votações (%)</option>
       </select>
     </div>
@@ -231,21 +234,27 @@
 <section id="painel-fornecedores" class="hidden">
   <form hx-get="/ui/partials/fornecedores"
         hx-target="#fornecedores-resultado"
-        hx-trigger="submit, change from:select, keyup changed delay:300ms from:input[name='busca']"
+        hx-trigger="submit, change from:select, change from:input[type='checkbox'], keyup changed delay:300ms from:input[name='busca']"
         hx-indicator="#loading-forn"
-        class="bg-white border border-rule p-4 mb-5 grid grid-cols-1 md:grid-cols-3 gap-3">
-    <div class="md:col-span-2">
-      <label class="micro block mb-1.5">Buscar empresa por nome ou CNPJ (somente números)</label>
-      <input type="text" name="busca" placeholder="Ex.: TAM, GOL, Locadora, 02012862000160..."
-             class="w-full min-h-[40px] bg-paper border border-rule px-3 py-2 text-sm text-ink placeholder-muted focus:outline-none focus:border-ink focus:bg-white" />
+        class="bg-white border border-rule p-4 mb-5 space-y-3">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="md:col-span-2">
+        <label class="micro block mb-1.5">Buscar empresa por nome ou CNPJ (somente números)</label>
+        <input type="text" name="busca" placeholder="Ex.: TAM, GOL, Locadora, 02012862000160..."
+               class="w-full min-h-[40px] bg-paper border border-rule px-3 py-2 text-sm text-ink placeholder-muted focus:outline-none focus:border-ink focus:bg-white" />
+      </div>
+      <div>
+        <label class="micro block mb-1.5">Ordenar empresas por</label>
+        <select name="ordenar" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink">
+          <option value="deputados_desc">Mais deputados atendidos (rede compartilhada)</option>
+          <option value="valor_desc">Maior valor total recebido (R$)</option>
+        </select>
+      </div>
     </div>
-    <div>
-      <label class="micro block mb-1.5">Ordenar empresas por</label>
-      <select name="ordenar" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink">
-        <option value="deputados_desc">Mais deputados atendidos (rede compartilhada)</option>
-        <option value="valor_desc">Maior valor total recebido (R$)</option>
-      </select>
-    </div>
+    <label class="inline-flex items-center gap-2 text-xs text-ink cursor-pointer select-none pt-1">
+      <input type="checkbox" name="ocultar_comuns" value="1" class="w-4 h-4 accent-[#C83226]" />
+      <span><strong>Ocultar fornecedores comuns</strong> (companhias aéreas, telefonia, postos, Uber/99, Correios e grandes locadoras) — revela agências, consultorias e gráficas compartilhadas</span>
+    </label>
   </form>
   <div id="loading-forn" class="htmx-indicator text-xs font-mono uppercase tracking-[0.06em] text-signal mb-3">Consultando rede de fornecedores...</div>
   <div id="fornecedores-resultado" class="bg-white border border-rule p-6 text-sm text-muted">Carregando fornecedores...</div>

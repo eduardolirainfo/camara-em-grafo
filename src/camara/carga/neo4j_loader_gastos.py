@@ -7,6 +7,7 @@ import io
 import json
 import logging
 import re
+import statistics
 import time
 import zipfile
 from collections import defaultdict
@@ -341,6 +342,102 @@ def atualizar_presenca_historica(
     return {"atualizados": len(linhas), "com_licenca_cargo": com_licenca}
 
 
+CYPHER_ATUALIZAR_INDICADORES = """
+UNWIND $linhas AS row
+MATCH (d:Deputado {id: row.id})
+SET d.hhiFornecedores = row.hhiFornecedores,
+    d.gastoVsMedianaUf = row.gastoVsMedianaUf,
+    d.projetosVotados = row.projetosVotados,
+    d.projetosAprovados = row.projetosAprovados
+"""
+
+
+def atualizar_indicadores_cientificos(driver: Driver) -> dict[str, int]:
+    """Calcula e grava indicadores objetivos normalizados no Neo4j:
+    - hhiFornecedores: Índice Herfindahl-Hirschman (0–10000) de concentração de fornecedores.
+    - gastoVsMedianaUf: razão entre o gasto diário do deputado e a mediana da própria UF.
+    - projetosVotados / projetosAprovados: funil de efetividade legislativa.
+    """
+    with driver.session() as session:
+        deps = session.run(
+            """
+            MATCH (d:Deputado)
+            OPTIONAL MATCH (d)-[r:PAGOU]->(:Fornecedor)
+            WITH d, collect(r.total) AS valoresPagos
+            OPTIONAL MATCH (d)-[:AUTOR_DE]->(p:Proposicao)<-[:SOBRE]-(v:Votacao)
+            WITH d, valoresPagos,
+                 count(DISTINCT p) AS projetosVotados,
+                 count(DISTINCT CASE WHEN v.aprovacao = true THEN p END) AS projetosAprovados
+            RETURN d.id AS id,
+                   d.uf AS uf,
+                   coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,
+                   coalesce(d.diasEmExercicio, 0) AS diasEmExercicio,
+                   valoresPagos,
+                   projetosVotados,
+                   projetosAprovados
+            """
+        ).data()
+
+    por_uf: dict[str, list[float]] = defaultdict(list)
+    diario_por_dep: dict[int, float] = {}
+    for row in deps:
+        gasto = float(row["gastoTotalCeap"] or 0.0)
+        dias = int(row["diasEmExercicio"] or 0)
+        uf = str(row["uf"] or "").strip().upper()
+        if gasto > 0 and dias >= 60 and uf:
+            diario = gasto / dias
+            diario_por_dep[int(row["id"])] = diario
+            por_uf[uf].append(diario)
+
+    mediana_uf = {uf: statistics.median(vals) for uf, vals in por_uf.items() if vals}
+
+    linhas: list[dict[str, Any]] = []
+    alta_conc = 0
+    acima_uf = 0
+    for row in deps:
+        dep_id = int(row["id"])
+        uf = str(row["uf"] or "").strip().upper()
+        gasto = float(row["gastoTotalCeap"] or 0.0)
+        pagos = [float(v) for v in (row["valoresPagos"] or []) if v and float(v) > 0]
+        denom = max(gasto, sum(pagos))
+        hhi = (
+            round(sum((v / denom) ** 2 for v in pagos) * 10000)
+            if denom > 0 and pagos
+            else 0
+        )
+        med = mediana_uf.get(uf, 0.0)
+        diario = diario_por_dep.get(dep_id)
+        ratio_uf = round(diario / med, 4) if (diario is not None and med > 0) else None
+
+        if hhi >= 2500:
+            alta_conc += 1
+        if ratio_uf is not None and ratio_uf >= 1.25:
+            acima_uf += 1
+
+        linhas.append(
+            {
+                "id": dep_id,
+                "hhiFornecedores": hhi,
+                "gastoVsMedianaUf": ratio_uf,
+                "projetosVotados": int(row["projetosVotados"] or 0),
+                "projetosAprovados": int(row["projetosAprovados"] or 0),
+            }
+        )
+
+    with driver.session() as session:
+        for lote in _em_lotes(linhas, 500):
+            session.execute_write(
+                lambda tx, rows=lote: tx.run(
+                    CYPHER_ATUALIZAR_INDICADORES, linhas=rows
+                ).consume()
+            )
+    return {
+        "atualizados": len(linhas),
+        "alta_concentracao_hhi": alta_conc,
+        "acima_mediana_uf_25pct": acima_uf,
+    }
+
+
 def contar_funcionarios_por_deputado(cache_dir: Path) -> dict[int, int]:
     path = Path(cache_dir) / "arquivos" / "funcionarios" / "funcionarios.csv"
     if not path.exists():
@@ -522,6 +619,7 @@ def carregar_gastos_e_equipe(
         cache_dir=cache_dir,
         user_agent=user_agent,
     )
+    atualizar_indicadores_cientificos(driver=driver)
 
     return ResumoCargaGastos(
         anos=anos,
