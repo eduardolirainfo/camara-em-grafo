@@ -307,12 +307,30 @@ def criar_ui_router(
         )
 
     @router.get("/deputado/{dep_id}/tab/funcionarios", response_class=HTMLResponse)
-    async def tab_funcionarios(request: Request, dep_id: int) -> HTMLResponse:
-        funcionarios = await ficha_service.obter_funcionarios(dep_id)
+    async def tab_funcionarios(
+        request: Request,
+        dep_id: int,
+        ano: int | None = None,
+    ) -> HTMLResponse:
+        ano_sel = ano or anos_ordenados[0]
+        nome_civil = ""
+        try:
+            det = await ficha_service.obter_detalhes_api(dep_id)
+            nome_civil = str(det.get("nomeCivil") or "")
+        except _API_ERROS:
+            pass
+        pessoal = await ficha_service.obter_pessoal_gabinete(
+            dep_id, ano=ano_sel, nome_civil=nome_civil
+        )
         return templates.TemplateResponse(
             request=request,
             name="partials/tab_funcionarios.html",
-            context={"funcionarios": funcionarios, "dep_id": dep_id},
+            context={
+                "pessoal": pessoal,
+                "funcionarios": pessoal["itens"],
+                "dep_id": dep_id,
+                "ano": ano_sel,
+            },
         )
 
     @router.get("/deputado/{dep_id}/tab/proposicoes", response_class=HTMLResponse)

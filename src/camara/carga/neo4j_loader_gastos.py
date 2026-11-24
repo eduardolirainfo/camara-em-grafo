@@ -4,13 +4,16 @@ from __future__ import annotations
 
 import csv
 import io
+import json
 import logging
 import re
 import time
 import zipfile
 from collections import defaultdict
 from collections.abc import Iterable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import asdict, dataclass
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -177,6 +180,165 @@ def atualizar_em_exercicio(
         "em_exercicio": int(rec["emExercicio"]) if rec else 0,
         "fora_exercicio": int(rec["foraExercicio"]) if rec else 0,
     }
+
+
+CYPHER_ATUALIZAR_PRESENCA_HISTORICA = """
+UNWIND $linhas AS row
+MATCH (d:Deputado {id: row.id})
+SET d.votacoesAtivo = row.votacoesAtivo,
+    d.diasEmExercicio = row.diasEmExercicio,
+    d.teveLicencaCargo = row.teveLicencaCargo
+"""
+
+
+def calcular_intervalos_exercicio(
+    historico: list[dict[str, Any]],
+    legislatura: int,
+    data_fim_ref: str,
+    em_exercicio_atual: bool = True,
+) -> tuple[list[tuple[str, str]], bool]:
+    """Reconstrói os intervalos exatos (inicio, fim) em que o deputado esteve em exercício na legislatura."""
+    eventos = [
+        ev for ev in historico if int(ev.get("idLegislatura") or 0) == legislatura
+    ]
+    eventos.sort(key=lambda x: str(x.get("dataHora") or ""))
+
+    intervalos: list[tuple[str, str]] = []
+    aberto_em: str | None = None
+    teve_licenca_cargo = False
+    viu_movimentacao = False
+
+    for ev in eventos:
+        dt = str(ev.get("dataHora") or "")[:10]
+        if len(dt) != 10:
+            continue
+        desc = str(ev.get("descricaoStatus") or "").strip()
+        desc_low = desc.lower()
+        sit = str(ev.get("situacao") or "").strip().lower()
+
+        if any(k in desc_low for k in ("ministro", "secretário", "secretario")):
+            teve_licenca_cargo = True
+
+        eh_entrada = desc_low.startswith("entrada")
+        eh_saida = desc_low.startswith(("saída", "saida"))
+
+        if eh_entrada:
+            viu_movimentacao = True
+            if aberto_em is None:
+                aberto_em = dt
+        elif eh_saida:
+            viu_movimentacao = True
+            if aberto_em is not None:
+                intervalos.append((aberto_em, dt))
+                aberto_em = None
+        elif sit == "exercício" and aberto_em is None and "início da legislatura" not in desc_low and "diverso" not in desc_low:
+            viu_movimentacao = True
+            aberto_em = dt
+
+    if aberto_em is not None:
+        intervalos.append((aberto_em, data_fim_ref))
+    elif not viu_movimentacao and em_exercicio_atual:
+        intervalos.append(("2023-02-01", data_fim_ref))
+
+    return intervalos, teve_licenca_cargo
+
+
+def atualizar_presenca_historica(
+    driver: Driver,
+    cache_dir: Path,
+    legislatura: int = 57,
+    api_base_url: str = "https://dadosabertos.camara.leg.br/api/v2",
+    user_agent: str = "camara-em-grafo/0.1 (projeto de estudo de dados abertos)",
+) -> dict[str, int]:
+    """Calcula d.votacoesAtivo, d.diasEmExercicio e d.teveLicencaCargo usando /deputados/{id}/historico."""
+    with driver.session() as session:
+        dep_rows = session.run(
+            "MATCH (d:Deputado) RETURN d.id AS id, coalesce(d.emExercicio, true) AS ex"
+        ).data()
+        vot_datas = [
+            str(r["dt"])[:10]
+            for r in session.run("MATCH (v:Votacao) RETURN v.data AS dt").data()
+            if r.get("dt")
+        ]
+
+    if not dep_rows or not vot_datas:
+        return {"atualizados": 0, "com_licenca_cargo": 0}
+
+    max_data = max(vot_datas)
+    hist_cache_dir = Path(cache_dir) / "ficha_api" / "historico"
+    hist_cache_dir.mkdir(parents=True, exist_ok=True)
+    headers = {"Accept": "application/json", "User-Agent": user_agent}
+
+    def _carregar_hist(dep_id: int) -> tuple[int, list[dict[str, Any]]]:
+        cpath = hist_cache_dir / f"{dep_id}.json"
+        if cpath.exists() and cpath.stat().st_size > 0:
+            try:
+                return dep_id, json.loads(cpath.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                pass
+        url = f"{api_base_url.rstrip('/')}/deputados/{dep_id}/historico"
+        for tentativa in range(4):
+            try:
+                time.sleep(0.18)
+                with httpx.Client(headers=headers, timeout=20.0, follow_redirects=True) as client:
+                    resp = client.get(url)
+                    if resp.status_code in {429, 500, 502, 503, 504}:
+                        espera = float(resp.headers.get("Retry-After") or (1.5 * (tentativa + 1)))
+                        time.sleep(min(espera, 8.0))
+                        continue
+                    resp.raise_for_status()
+                    dados = list(resp.json().get("dados") or [])
+                cpath.write_text(json.dumps(dados, ensure_ascii=False), encoding="utf-8")
+                return dep_id, dados
+            except httpx.HTTPError as exc:
+                if tentativa == 3:
+                    logger.warning("Falha ao buscar histórico do deputado %s: %s", dep_id, exc)
+                else:
+                    time.sleep(1.5 * (tentativa + 1))
+        return dep_id, []
+
+    ex_map = {int(r["id"]): bool(r["ex"]) for r in dep_rows}
+    linhas: list[dict[str, Any]] = []
+    com_licenca = 0
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        for dep_id, hist in pool.map(_carregar_hist, list(ex_map.keys())):
+            intervalos, teve_licenca = calcular_intervalos_exercicio(
+                historico=hist,
+                legislatura=legislatura,
+                data_fim_ref=max_data,
+                em_exercicio_atual=ex_map[dep_id],
+            )
+            if teve_licenca:
+                com_licenca += 1
+            vot_ativo = sum(
+                1 for dt in vot_datas if any(ini <= dt <= fim for ini, fim in intervalos)
+            )
+            dias = 0
+            for ini, fim in intervalos:
+                try:
+                    d0 = date.fromisoformat(ini)
+                    d1 = date.fromisoformat(fim)
+                    dias += max(1, (d1 - d0).days + 1)
+                except ValueError:
+                    pass
+            linhas.append(
+                {
+                    "id": dep_id,
+                    "votacoesAtivo": vot_ativo,
+                    "diasEmExercicio": dias,
+                    "teveLicencaCargo": teve_licenca,
+                }
+            )
+
+    with driver.session() as session:
+        for lote in _em_lotes(linhas, 500):
+            session.execute_write(
+                lambda tx, rows=lote: tx.run(
+                    CYPHER_ATUALIZAR_PRESENCA_HISTORICA, linhas=rows
+                ).consume()
+            )
+    return {"atualizados": len(linhas), "com_licenca_cargo": com_licenca}
 
 
 def contar_funcionarios_por_deputado(cache_dir: Path) -> dict[int, int]:
@@ -355,6 +517,11 @@ def carregar_gastos_e_equipe(
         )
 
     atualizar_em_exercicio(driver=driver, user_agent=user_agent)
+    atualizar_presenca_historica(
+        driver=driver,
+        cache_dir=cache_dir,
+        user_agent=user_agent,
+    )
 
     return ResumoCargaGastos(
         anos=anos,

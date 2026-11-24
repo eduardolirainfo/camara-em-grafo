@@ -1,31 +1,61 @@
 <div class="space-y-4">
   <div class="bg-white border border-rule p-4 flex flex-wrap items-center justify-between gap-3">
     <div>
-      <div class="micro">Pessoal de Gabinete</div>
-      <h2 class="font-bold text-ink text-base mt-0.5">Funcionários Lotados (<span class="num">{{ funcionarios|length }}</span>)</h2>
+      <div class="micro">Pessoal de Gabinete · {{ ano }}</div>
+      <h2 class="font-bold text-ink text-base mt-0.5">
+        Equipe e Rotatividade no Gabinete (<span class="num">{{ pessoal.total }}</span> em {{ ano }})
+      </h2>
       <p class="text-xs text-muted mt-0.5">
-        Fonte oficial: <code class="font-mono text-ink">funcionarios.csv</code> da Câmara dos Deputados (Secretários Parlamentares e CNEs).
+        Fonte oficial: portal de Pessoal de Gabinete da Câmara dos Deputados (com link individual para o contracheque).
       </p>
     </div>
-    <div class="flex flex-wrap gap-2">
-      <a href="https://www.camara.leg.br/deputados/{{ dep_id }}/verba-gabinete" target="_blank"
-         class="px-3 py-2 bg-ink hover:bg-signal text-paper font-mono text-[11px] uppercase tracking-[0.06em] transition-colors">
-        Verba de Gabinete na Câmara ↗
+    <div class="flex flex-wrap items-center gap-1">
+      {% for y in ANOS_DISPONIVEIS %}
+      <button hx-get="/ui/deputado/{{ dep_id }}/tab/funcionarios?ano={{ y }}"
+              hx-target="#tab-conteudo"
+              hx-indicator="#tab-loading"
+              class="px-3 py-1.5 font-mono text-xs border transition-colors {% if y == ano %}bg-ink text-paper border-ink font-semibold{% else %}bg-paper text-ink border-rule hover:border-ink{% endif %}">
+        {{ y }}
+      </button>
+      {% endfor %}
+    </div>
+  </div>
+
+  <!-- Indicadores objetivos da equipe -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 border-t border-l border-rule bg-white">
+    <div class="border-r border-b border-rule p-3.5">
+      <div class="micro">Ativos no Gabinete</div>
+      <div class="num text-2xl font-semibold text-civic mt-1">{{ pessoal.ativos }}</div>
+    </div>
+    <div class="border-r border-b border-rule p-3.5">
+      <div class="micro">Exonerados / Saíram em {{ ano }}</div>
+      <div class="num text-2xl font-semibold {% if pessoal.exonerados >= 10 %}text-ochre{% else %}text-ink{% endif %} mt-1">{{ pessoal.exonerados }}</div>
+    </div>
+    <div class="border-r border-b border-rule p-3.5">
+      <div class="micro">Mesmo Sobrenome do Deputado</div>
+      <div class="num text-2xl font-semibold {% if pessoal.mesmo_sobrenome_qtd > 0 %}text-signal{% else %}text-ink{% endif %} mt-1">{{ pessoal.mesmo_sobrenome_qtd }}</div>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap items-center justify-between gap-2 bg-paper border-l-2 border-ink border-y border-r border-rule p-3.5 text-xs text-muted">
+    <span>
+      <strong class="text-ink">Nota de verificação:</strong> clique em <em>Ver salário ↗</em> para consultar o contracheque oficial de cada funcionário mês a mês. A marcação <em>Mesmo sobrenome</em> indica apenas coincidência textual com o nome civil do parlamentar — não comprova parentesco nem ilegalidade.
+    </span>
+    <div class="flex flex-wrap gap-2 shrink-0">
+      <a href="https://www.camara.leg.br/deputados/{{ dep_id }}/pessoal-gabinete?ano={{ ano }}" target="_blank"
+         class="px-2.5 py-1.5 bg-ink hover:bg-signal text-paper font-mono text-[11px] uppercase tracking-[0.06em] transition-colors">
+        Lista Oficial {{ ano }} ↗
       </a>
       <a href="https://www2.camara.leg.br/transparencia/recursos-humanos/remuneracao" target="_blank"
-         class="px-3 py-2 border border-ink bg-white hover:bg-tint text-ink font-mono text-[11px] uppercase tracking-[0.06em] transition-colors">
+         class="px-2.5 py-1.5 border border-ink bg-white hover:bg-tint text-ink font-mono text-[11px] uppercase tracking-[0.06em] transition-colors">
         Tabela de Remuneração ↗
       </a>
     </div>
   </div>
 
-  <div class="bg-paper border-l-2 border-ink border-y border-r border-rule p-3.5 text-xs text-muted leading-relaxed">
-    <strong class="text-ink">Transparência sobre salários:</strong> a API publica a lista completa de funcionários, níveis (SP01–SP25 / CNE) e datas de nomeação, mas não disponibiliza contracheques individuais em JSON/CSV. Use os links acima para ver os valores mensais exatos no portal oficial.
-  </div>
-
   {% if not funcionarios %}
   <div class="bg-white border border-rule p-6 text-center text-sm text-muted">
-    Nenhum funcionário ativo listado para este gabinete no arquivo atual (comum para deputados licenciados, suplentes fora de exercício ou renúncias).
+    Nenhum funcionário listado para este gabinete em {{ ano }} (comum para deputados licenciados, suplentes fora de exercício ou renúncias).
   </div>
   {% else %}
   <div class="bg-white border border-rule p-4 overflow-x-auto">
@@ -33,20 +63,40 @@
       <thead class="micro border-b border-ink bg-paper">
         <tr>
           <th class="py-2.5 px-2">Nome</th>
-          <th class="py-2.5 px-2">Grupo</th>
+          <th class="py-2.5 px-2">Situação</th>
           <th class="py-2.5 px-2">Cargo / Nível</th>
-          <th class="py-2.5 px-2">Nomeação</th>
-          <th class="py-2.5 px-2">Lotação</th>
+          <th class="py-2.5 px-2">Período de Exercício</th>
+          <th class="py-2.5 px-2 text-right">Contracheque</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-rule text-ink">
         {% for f in funcionarios %}
         <tr class="hover:bg-paper/70">
-          <td class="py-2 px-2 font-semibold">{{ f.nome }}</td>
-          <td class="py-2 px-2 text-muted">{{ f.grupo }}</td>
-          <td class="py-2 px-2"><span class="px-2 py-0.5 bg-paper border border-rule font-mono text-[11px]">{{ f.cargo or f.funcao or '—' }}</span></td>
-          <td class="py-2 px-2 num text-muted whitespace-nowrap">{{ f.dataNomeacao or '—' }}</td>
-          <td class="py-2 px-2 text-muted">{{ f.lotacao }}</td>
+          <td class="py-2 px-2">
+            <span class="font-semibold">{{ f.nome }}</span>
+            {% if f.mesmo_sobrenome %}
+            <span class="ml-1.5 px-1.5 py-0.5 bg-red-50 border border-signal text-signal font-mono text-[10px] uppercase">
+              Mesmo sobrenome ({{ f.sobrenomes_comuns|join(', ') }})
+            </span>
+            {% endif %}
+            <div class="text-[11px] text-muted">{{ f.grupo }}</div>
+          </td>
+          <td class="py-2 px-2 whitespace-nowrap">
+            {% if f.ativo %}
+            <span class="px-1.5 py-0.5 bg-civic text-white font-mono text-[10px] uppercase">Ativo</span>
+            {% else %}
+            <span class="px-1.5 py-0.5 bg-tint border border-rule text-muted font-mono text-[10px] uppercase">Exonerado</span>
+            {% endif %}
+          </td>
+          <td class="py-2 px-2"><span class="px-2 py-0.5 bg-paper border border-rule font-mono text-[11px]">{{ f.cargo or '—' }}</span></td>
+          <td class="py-2 px-2 num text-muted whitespace-nowrap">{{ f.periodo or '—' }}</td>
+          <td class="py-2 px-2 text-right whitespace-nowrap font-mono">
+            {% if f.url_remuneracao %}
+            <a href="{{ f.url_remuneracao }}" target="_blank" class="text-cobalt underline underline-offset-2 hover:text-signal font-medium">
+              Ver salário ↗
+            </a>
+            {% else %}—{% endif %}
+          </td>
         </tr>
         {% endfor %}
       </tbody>

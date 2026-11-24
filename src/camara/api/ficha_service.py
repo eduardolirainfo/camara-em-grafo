@@ -3,7 +3,11 @@
 from __future__ import annotations
 
 import csv
+import html as html_lib
+import json
 import logging
+import re
+import unicodedata
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -59,6 +63,71 @@ def url_bandeira_uf(sigla: str | None) -> str | None:
         return None
     info = UF_INFO.get(sigla.strip().upper())
     return info["bandeira"] if info else None
+
+
+_CONECTORES_NOME = {
+    "DA", "DE", "DO", "DOS", "DAS", "E", "FILHO", "FILHA",
+    "NETO", "NETA", "JUNIOR", "SOBRINHO", "SOBRINHA", "SEGUNDO", "TERCEIRO",
+}
+_SOBRENOMES_MUITO_COMUNS = {
+    "SILVA", "SANTOS", "OLIVEIRA", "SOUZA", "SOUSA", "PEREIRA", "COSTA",
+    "RODRIGUES", "ALMEIDA", "LIMA", "FERREIRA", "ALVES", "GOMES", "RIBEIRO",
+    "MARTINS", "ARAUJO", "NASCIMENTO", "CARVALHO",
+}
+
+
+def _normalizar_texto_nome(texto: str) -> str:
+    sem_acento = "".join(
+        ch for ch in unicodedata.normalize("NFD", texto) if unicodedata.category(ch) != "Mn"
+    )
+    return re.sub(r"[^A-Z\s]", " ", sem_acento.upper()).strip()
+
+
+def _extrair_sobrenomes_relevantes(nome: str) -> set[str]:
+    tokens = _normalizar_texto_nome(nome).split()
+    if len(tokens) <= 1:
+        return set()
+    return {
+        t
+        for t in tokens[1:]
+        if len(t) >= 4 and t not in _CONECTORES_NOME and t not in _SOBRENOMES_MUITO_COMUNS
+    }
+
+
+def _parsear_pessoal_gabinete_html(html_text: str) -> list[dict[str, Any]]:
+    """Extrai funcionários (ativos e exonerados) e links individuais de remuneração do HTML da Câmara."""
+    linhas = re.findall(r"<tr[^>]*>(.*?)</tr>", html_text, flags=re.DOTALL | re.IGNORECASE)
+    resultado: list[dict[str, Any]] = []
+    for linha in linhas:
+        celulas = re.findall(r"<td[^>]*>(.*?)</td>", linha, flags=re.DOTALL | re.IGNORECASE)
+        if len(celulas) < 4:
+            continue
+        limpas = [
+            re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]+>", " ", c))).strip()
+            for c in celulas
+        ]
+        nome = limpas[0]
+        if not nome or nome.lower() == "nome":
+            continue
+        grupo = limpas[1] if len(limpas) > 1 else ""
+        cargo = limpas[2] if len(limpas) > 2 else ""
+        periodo = limpas[3] if len(limpas) > 3 else ""
+        href_match = re.search(r'href="([^"]*remuneracao/[^"]+)"', linha, flags=re.IGNORECASE)
+        url_rem = href_match.group(1) if href_match else ""
+        if url_rem.startswith("/"):
+            url_rem = f"https://www.camara.leg.br{url_rem}"
+        ativo = periodo.lower().startswith("desde ") and " a " not in periodo.lower()
+        resultado.append(
+            {
+                "nome": nome,
+                "grupo": grupo,
+                "cargo": cargo,
+                "periodo": periodo,
+                "ativo": ativo,
+                "url_remuneracao": url_rem,
+            }
+        )
+    return resultado
 
 
 def _valor_liquido_despesa(item: dict[str, Any]) -> float:
@@ -244,6 +313,80 @@ class FichaDeputadoService:
         if self._funcionarios_por_dep is None:
             await self._carregar_indice_funcionarios()
         return list((self._funcionarios_por_dep or {}).get(dep_id, []))
+
+    async def obter_pessoal_gabinete(
+        self,
+        dep_id: int,
+        ano: int,
+        nome_civil: str | None = None,
+    ) -> dict[str, Any]:
+        """Consulta a página oficial de pessoal de gabinete da Câmara (ativos + exonerados no ano)
+        com link direto para o contracheque individual e sinalização factual de mesmo sobrenome."""
+        cache_path = self.cache_dir / "ficha_api" / f"pessoal_gabinete_{dep_id}_{ano}.json"
+        registros: list[dict[str, Any]] | None = None
+        if cache_path.exists() and cache_path.stat().st_size > 0:
+            try:
+                registros = json.loads(cache_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                registros = None
+
+        if registros is None:
+            url = f"https://www.camara.leg.br/deputados/{dep_id}/pessoal-gabinete?ano={ano}"
+            try:
+                async with httpx.AsyncClient(
+                    headers={"User-Agent": self.user_agent},
+                    timeout=20.0,
+                    follow_redirects=True,
+                ) as client:
+                    resp = await client.get(url)
+                    resp.raise_for_status()
+                registros = _parsear_pessoal_gabinete_html(resp.text)
+                cache_path.parent.mkdir(parents=True, exist_ok=True)
+                cache_path.write_text(
+                    json.dumps(registros, ensure_ascii=False), encoding="utf-8"
+                )
+            except httpx.HTTPError as exc:
+                logger.warning("Falha ao consultar pessoal-gabinete (%s/%s): %s", dep_id, ano, exc)
+                # Fallback para funcionarios.csv
+                csv_funcs = await self.obter_funcionarios(dep_id)
+                registros = [
+                    {
+                        "nome": f["nome"],
+                        "grupo": f["grupo"],
+                        "cargo": f["cargo"] or f["funcao"] or "—",
+                        "periodo": f"Desde {f['dataNomeacao']}" if f.get("dataNomeacao") else "Ativo",
+                        "ativo": True,
+                        "url_remuneracao": "",
+                    }
+                    for f in csv_funcs
+                ]
+
+        sobrenomes_dep = _extrair_sobrenomes_relevantes(nome_civil or "")
+        enriquecidos: list[dict[str, Any]] = []
+        ativos = 0
+        exonerados = 0
+        mesmo_sobrenome_qtd = 0
+        for r in registros:
+            sobrenomes_func = _extrair_sobrenomes_relevantes(r.get("nome", ""))
+            coinc = sorted(sobrenomes_dep & sobrenomes_func) if sobrenomes_dep else []
+            tem_coinc = bool(coinc)
+            if r.get("ativo", True):
+                ativos += 1
+            else:
+                exonerados += 1
+            if tem_coinc:
+                mesmo_sobrenome_qtd += 1
+            enriquecidos.append({**r, "mesmo_sobrenome": tem_coinc, "sobrenomes_comuns": coinc})
+
+        enriquecidos.sort(key=lambda x: (not x.get("ativo", True), not x["mesmo_sobrenome"], x["nome"]))
+        return {
+            "ano": ano,
+            "ativos": ativos,
+            "exonerados": exonerados,
+            "total": len(enriquecidos),
+            "mesmo_sobrenome_qtd": mesmo_sobrenome_qtd,
+            "itens": enriquecidos,
+        }
 
     async def _carregar_indice_funcionarios(self) -> None:
         path = self.cache_dir / "arquivos" / "funcionarios" / "funcionarios.csv"

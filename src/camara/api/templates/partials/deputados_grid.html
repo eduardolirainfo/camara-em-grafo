@@ -89,7 +89,7 @@
           {{ d.taxaPresenca|pct }}
         </div>
         <div class="tip-box">
-          <strong>Presença em votações nominais:</strong> registrou voto em <strong>{{ d.totalVotos or 0 }}</strong> de <strong>{{ d.votacoesNoPeriodo or d.totalVotacoesNominais or 1613 }}</strong> votações{% if d.primeiroVoto %} no seu período ativo (desde {{ d.primeiroVoto|data_br }}){% endif %}. Ex-ministros/secretários licenciados no meio do mandato e presidentes da Câmara podem ter percentual menor.
+          <strong>Presença em votações nominais:</strong> votou em <strong>{{ d.totalVotos or 0 }}</strong> de <strong>{{ d.votacoesNoPeriodo or d.totalVotacoesNominais or 1613 }}</strong> votações ocorridas enquanto estava em exercício{% if d.diasEmExercicio %} ({{ d.diasEmExercicio }} dias ativos){% endif %}.{% if d.teveLicencaCargo %}<br><em>Afastou-se p/ cargo (Ministro/Secretário) durante parte do mandato — períodos fora foram descontados.</em>{% endif %}
         </div>
       </div>
       <div class="tip-wrap border-r border-b border-rule px-2.5 py-1.5 bg-paper/60">

@@ -516,6 +516,7 @@ class Neo4jGraphRepository:
             WHERE NOT $exigirAtivoPresenca OR totalVotos > 0
             WITH d, taxaDivergencia, totalContra, totalVotos, primeiroVoto, ultimoVoto,
                  CASE
+                   WHEN d.votacoesAtivo IS NOT NULL AND d.votacoesAtivo > 0 THEN toInteger(d.votacoesAtivo)
                    WHEN primeiroVoto IS NULL THEN $totalVotacoes
                    WHEN coalesce(d.emExercicio, true) = true
                      THEN size([dt IN todasDatas WHERE dt >= primeiroVoto AND dt <= maxData])
@@ -526,7 +527,10 @@ class Neo4jGraphRepository:
                  CASE WHEN votacoesNoPeriodo > 0 THEN votacoesNoPeriodo ELSE $totalVotacoes END AS votacoesNoPeriodo,
                  partidos
             WITH d, taxaDivergencia, totalContra, totalVotos, primeiroVoto, ultimoVoto, votacoesNoPeriodo,
-                 round(toFloat(totalVotos) / votacoesNoPeriodo, 4) AS taxaPresenca,
+                 CASE
+                   WHEN totalVotos >= votacoesNoPeriodo THEN 1.0
+                   ELSE round(toFloat(totalVotos) / votacoesNoPeriodo, 4)
+                 END AS taxaPresenca,
                  partidos,
                  size(partidos) AS numPartidos,
                  coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,
@@ -536,6 +540,8 @@ class Neo4jGraphRepository:
                  coalesce(d.gastoConsultorias, 0.0) AS gastoConsultorias,
                  coalesce(d.maiorFornecedorPct, 0.0) AS maiorFornecedorPct,
                  coalesce(d.numFuncionarios, 0) AS numFuncionarios,
+                 coalesce(d.teveLicencaCargo, false) AS teveLicencaCargo,
+                 coalesce(d.diasEmExercicio, 0) AS diasEmExercicio,
                  CASE WHEN totalVotos >= 20 THEN round(coalesce(d.gastoTotalCeap, 0.0) / totalVotos, 2) ELSE 0.0 END AS custoPorVoto
             RETURN d.id AS id,
                    d.nome AS nome,
@@ -552,6 +558,8 @@ class Neo4jGraphRepository:
                    primeiroVoto,
                    ultimoVoto,
                    taxaPresenca,
+                   teveLicencaCargo,
+                   diasEmExercicio,
                    partidos,
                    numPartidos,
                    gastoTotalCeap,

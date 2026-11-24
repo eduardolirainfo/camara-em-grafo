@@ -138,6 +138,29 @@ class _FakeFichaService(FichaDeputadoService):
             }
         ]
 
+    async def obter_pessoal_gabinete(
+        self, dep_id: int, ano: int, nome_civil: str | None = None
+    ) -> dict[str, Any]:
+        return {
+            "ano": ano,
+            "ativos": 1,
+            "exonerados": 0,
+            "total": 1,
+            "mesmo_sobrenome_qtd": 0,
+            "itens": [
+                {
+                    "nome": "MARIA EXEMPLO",
+                    "grupo": "SECRETÁRIO PARLAMENTAR",
+                    "cargo": "SP15",
+                    "periodo": "Desde 01/02/2023",
+                    "ativo": True,
+                    "url_remuneracao": "https://www.camara.leg.br/transparencia/recursos-humanos/remuneracao/abc",
+                    "mesmo_sobrenome": False,
+                    "sobrenomes_comuns": [],
+                }
+            ],
+        }
+
     async def obter_atuacao(self, dep_id: int) -> dict[str, Any]:
         return {"frentes": [{"id": 1, "titulo": "Frente X"}], "orgaos": [], "discursos": []}
 
@@ -190,3 +213,24 @@ def test_normalizacao_valor_liquido_invertido_api_camara() -> None:
     assert _valor_liquido_despesa({"valorDocumento": -450.0, "valorGlosa": 0.0, "valorLiquido": -450.0}) == -450.0
     # Caso normal positivo
     assert _valor_liquido_despesa({"valorDocumento": 1159.25, "valorGlosa": 0.0, "valorLiquido": 1159.25}) == 1159.25
+
+
+def test_intervalos_exercicio_desconta_afastamentos_secretario() -> None:
+    from camara.carga.neo4j_loader_gastos import calcular_intervalos_exercicio
+
+    historico = [
+        {"idLegislatura": 57, "dataHora": "2023-02-01T00:00", "descricaoStatus": "Entrada - Posse de Eleito Titular"},
+        {"idLegislatura": 57, "dataHora": "2023-02-15T00:00", "descricaoStatus": "Saída - Afastamento sem prazo determinado - Secretário de Estado"},
+        {"idLegislatura": 57, "dataHora": "2023-11-21T00:00", "descricaoStatus": "Entrada - Reassunção"},
+        {"idLegislatura": 57, "dataHora": "2023-11-24T00:00", "descricaoStatus": "Saída - Afastamento sem prazo determinado - Secretário de Estado"},
+        {"idLegislatura": 57, "dataHora": "2026-04-06T00:00", "descricaoStatus": "Entrada - Reassunção"},
+    ]
+    intervalos, teve_licenca = calcular_intervalos_exercicio(
+        historico, legislatura=57, data_fim_ref="2026-11-23", em_exercicio_atual=True
+    )
+    assert teve_licenca is True
+    assert intervalos == [
+        ("2023-02-01", "2023-02-15"),
+        ("2023-11-21", "2023-11-24"),
+        ("2026-04-06", "2026-11-23"),
+    ]
