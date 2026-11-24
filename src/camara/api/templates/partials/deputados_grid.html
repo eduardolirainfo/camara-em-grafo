@@ -89,7 +89,7 @@
           {{ d.taxaPresenca|pct }}
         </div>
         <div class="tip-box">
-          <strong>Presença em votações nominais:</strong> registrou voto em <strong>{{ d.totalVotos or 0 }}</strong> de {{ d.totalVotacoesNominais or 1613 }} votações (2023–2026). Presidentes da Câmara e suplentes têm percentual menor.
+          <strong>Presença em votações nominais:</strong> registrou voto em <strong>{{ d.totalVotos or 0 }}</strong> de <strong>{{ d.votacoesNoPeriodo or d.totalVotacoesNominais or 1613 }}</strong> votações{% if d.primeiroVoto %} no seu período ativo (desde {{ d.primeiroVoto|data_br }}){% endif %}. Ex-ministros/secretários licenciados no meio do mandato e presidentes da Câmara podem ter percentual menor.
         </div>
       </div>
       <div class="tip-wrap bg-slate-950/60 rounded-lg py-1">

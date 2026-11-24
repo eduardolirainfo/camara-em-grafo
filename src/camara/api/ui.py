@@ -86,7 +86,7 @@ def criar_ui_router(
         repo = obter_repo()
         resumo = await repo.resumo_geral_ui()
         mapa_grupos = {int(c["id"]): c for c in resumo.get("comunidades", [])}
-        inicial = await repo.buscar_deputados_ui(offset=0, limit=24)
+        inicial = await repo.buscar_deputados_ui(situacao="em_exercicio", offset=0, limit=24)
         todos_deps = await repo.listar_todos_deputados_simples()
         return templates.TemplateResponse(
             request=request,
@@ -97,6 +97,12 @@ def criar_ui_router(
                 "ufs": sorted(UF_INFO.items()),
                 "deputados": inicial["itens"],
                 "total_filtrado": inicial["total"],
+                "busca": "",
+                "uf": "",
+                "partido": "",
+                "comunidade": "",
+                "situacao": "em_exercicio",
+                "ordenar": "nome",
                 "offset": 0,
                 "limit": 24,
                 "todos_deps": todos_deps,

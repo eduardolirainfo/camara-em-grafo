@@ -467,16 +467,32 @@ class Neo4jGraphRepository:
                     WHERE toUpper(p.sigla) = $partido
                   })
         """
+        # Em "Menor presença", só faz sentido avaliar quem está atuando (salvo se o usuário
+        # escolheu explicitamente "Fora de exercício") e quem já participou de votações.
+        exigir_ativo_presenca = ordenar == "presenca_asc" and situacao != "fora_exercicio"
         params = {
             "busca": busca.strip() if busca and busca.strip() else None,
             "uf": uf.strip().upper() if uf and uf.strip() else None,
             "partido": partido.strip().upper() if partido and partido.strip() else None,
             "comunidade": comunidade,
             "situacao": situacao.strip() if situacao and situacao.strip() else None,
+            "exigirAtivoPresenca": exigir_ativo_presenca,
             "offset": offset,
             "limit": limit,
         }
-        total_rows = await self._run(f"{filtro} RETURN count(d) AS total", **params)
+
+        if exigir_ativo_presenca:
+            total_rows = await self._run(
+                f"""
+                {filtro}
+                AND coalesce(d.emExercicio, true) = true
+                AND EXISTS {{ MATCH (d)-[:VOTOU]->(:Votacao) }}
+                RETURN count(d) AS total
+                """,
+                **params,
+            )
+        else:
+            total_rows = await self._run(f"{filtro} RETURN count(d) AS total", **params)
         total = int(total_rows[0]["total"]) if total_rows else 0
 
         vot_rows = await self._run("MATCH (v:Votacao) RETURN count(v) AS total")
@@ -484,17 +500,34 @@ class Neo4jGraphRepository:
 
         itens = await self._run(
             f"""
+            MATCH (allv:Votacao)
+            WITH collect(allv.data) AS todasDatas, max(allv.data) AS maxData
             {filtro}
+            AND (NOT $exigirAtivoPresenca OR coalesce(d.emExercicio, true) = true)
             OPTIONAL MATCH (d)-[c:CONTRA_ORIENTACAO]->(:Partido)
-            WITH d,
+            WITH d, todasDatas, maxData,
                  coalesce(max(c.taxaDivergencia), 0.0) AS taxaDivergencia,
                  coalesce(sum(c.n), 0) AS totalContra
             OPTIONAL MATCH (d)-[:VOTOU]->(v:Votacao)
-            WITH d, taxaDivergencia, totalContra, count(DISTINCT v) AS totalVotos
-            WITH d, taxaDivergencia, totalContra, totalVotos,
-                 round(toFloat(totalVotos) / $totalVotacoes, 4) AS taxaPresenca,
+            WITH d, todasDatas, maxData, taxaDivergencia, totalContra,
+                 count(DISTINCT v) AS totalVotos,
+                 min(v.data) AS primeiroVoto,
+                 max(v.data) AS ultimoVoto
+            WHERE NOT $exigirAtivoPresenca OR totalVotos > 0
+            WITH d, taxaDivergencia, totalContra, totalVotos, primeiroVoto, ultimoVoto,
+                 CASE
+                   WHEN primeiroVoto IS NULL THEN $totalVotacoes
+                   WHEN coalesce(d.emExercicio, true) = true
+                     THEN size([dt IN todasDatas WHERE dt >= primeiroVoto AND dt <= maxData])
+                   ELSE size([dt IN todasDatas WHERE dt >= primeiroVoto AND dt <= ultimoVoto])
+                 END AS votacoesNoPeriodo,
                  [(d)-[:FILIADO_A]->(p:Partido) | p.sigla] AS partidos
-            WITH d, taxaDivergencia, totalContra, totalVotos, taxaPresenca, partidos,
+            WITH d, taxaDivergencia, totalContra, totalVotos, primeiroVoto, ultimoVoto,
+                 CASE WHEN votacoesNoPeriodo > 0 THEN votacoesNoPeriodo ELSE $totalVotacoes END AS votacoesNoPeriodo,
+                 partidos
+            WITH d, taxaDivergencia, totalContra, totalVotos, primeiroVoto, ultimoVoto, votacoesNoPeriodo,
+                 round(toFloat(totalVotos) / votacoesNoPeriodo, 4) AS taxaPresenca,
+                 partidos,
                  size(partidos) AS numPartidos,
                  coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,
                  coalesce(d.gastoViagens, 0.0) AS gastoViagens,
@@ -515,6 +548,9 @@ class Neo4jGraphRepository:
                    totalContra,
                    totalVotos,
                    $totalVotacoes AS totalVotacoesNominais,
+                   votacoesNoPeriodo,
+                   primeiroVoto,
+                   ultimoVoto,
                    taxaPresenca,
                    partidos,
                    numPartidos,
