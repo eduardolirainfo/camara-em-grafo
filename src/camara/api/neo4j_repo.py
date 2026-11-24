@@ -455,7 +455,7 @@ class Neo4jGraphRepository:
             "divulgacao_desc": "gastoDivulgacao DESC, d.nome ASC",
             "aeronaves_desc": "gastoAeronaves DESC, d.nome ASC",
             "consultorias_desc": "gastoConsultorias DESC, d.nome ASC",
-            "concentracao_desc": "maiorFornecedorPct DESC, gastoTotalCeap DESC",
+            "concentracao_desc": "CASE WHEN gastoTotalCeap >= 300000 AND diasEmExercicio >= 365 THEN maiorFornecedorPct ELSE 0.0 END DESC, gastoTotalCeap DESC",
             "hhi_desc": "hhiFornecedores DESC, gastoTotalCeap DESC",
             "gasto_uf_desc": "coalesce(gastoVsMedianaUf, 0.0) DESC, gastoTotalCeap DESC",
             "custo_voto_desc": "custoPorVoto DESC, gastoTotalCeap DESC",

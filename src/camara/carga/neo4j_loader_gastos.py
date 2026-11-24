@@ -394,7 +394,8 @@ def atualizar_indicadores_cientificos(driver: Driver) -> dict[str, int]:
         gasto = float(row["gastoTotalCeap"] or 0.0)
         dias = int(row["diasEmExercicio"] or 0)
         uf = str(row["uf"] or "").strip().upper()
-        if gasto > 0 and dias >= 60 and uf:
+        # Regra de materialidade estatística: ao menos 1 ano (365 dias) em exercício
+        if gasto > 0 and dias >= 365 and uf:
             diario = gasto / dias
             diario_por_dep[int(row["id"])] = diario
             por_uf[uf].append(diario)
@@ -408,11 +409,13 @@ def atualizar_indicadores_cientificos(driver: Driver) -> dict[str, int]:
         dep_id = int(row["id"])
         uf = str(row["uf"] or "").strip().upper()
         gasto = float(row["gastoTotalCeap"] or 0.0)
+        dias = int(row["diasEmExercicio"] or 0)
         pagos = [float(v) for v in (row["valoresPagos"] or []) if v and float(v) > 0]
         denom = max(gasto, sum(pagos))
+        # HHI só tem relevância estatística/fiscal com >= 365 dias ativos e >= R$ 300 mil gastos
         hhi = (
             round(sum((v / denom) ** 2 for v in pagos) * 10000)
-            if denom > 0 and pagos
+            if denom >= 300_000.0 and dias >= 365 and pagos
             else 0
         )
         med = mediana_uf.get(uf, 0.0)

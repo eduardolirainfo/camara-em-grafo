@@ -68,9 +68,9 @@
 
     <!-- Selos objetivos em SVG (indicadores auditáveis, sem estrelas subjetivas) -->
     {% set ratio_uf = d.get('gastoVsMedianaUf') %}
-    {% set tem_hhi = (d.get('hhiFornecedores') or 0) >= 2500 or (d.get('maiorFornecedorPct') or 0) >= 0.40 %}
+    {% set tem_hhi = (d.get('hhiFornecedores') or 0) >= 2500 %}
     {% set acima_uf = ratio_uf is not none and ratio_uf >= 1.15 %}
-    {% set econ_uf = ratio_uf is not none and ratio_uf <= 0.65 and (d.get('diasEmExercicio') or 0) >= 180 %}
+    {% set econ_uf = ratio_uf is not none and ratio_uf <= 0.65 and (d.get('diasEmExercicio') or 0) >= 365 %}
     {% set baixa_pres = (d.get('taxaPresenca') or 0) < 0.50 and (d.get('votacoesNoPeriodo') or 0) >= 50 %}
     {% set alta_pres = (d.get('taxaPresenca') or 0) >= 0.85 and (d.get('votacoesNoPeriodo') or 0) >= 50 %}
     {% set usou_aero = (d.get('gastoAeronaves') or 0) > 0 %}
