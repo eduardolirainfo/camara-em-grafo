@@ -2,54 +2,68 @@
 {% block title %}Câmara em Grafo — Explorador da 57ª Legislatura{% endblock %}
 
 {% block content %}
-<!-- KPIs do Grafo -->
-<section class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
-    <div class="text-xs text-slate-400">Deputados (57ª Leg.)</div>
-    <div class="text-2xl font-bold text-white mt-0.5">{{ resumo.nos.get("Deputado", 0) }}</div>
+<!-- Cabeçalho Editorial + KPIs em Grade Suíça -->
+<section class="mb-7">
+  <div class="flex flex-col md:flex-row md:items-end justify-between gap-3 pb-4 border-b-2 border-ink mb-5">
+    <div>
+      <div class="micro mb-1.5">Monitoramento Legislativo · Brasil</div>
+      <h1 class="text-2xl sm:text-4xl font-extrabold tracking-[-0.035em] text-ink leading-tight">
+        Gastos, votações e conexões da Câmara
+      </h1>
+    </div>
+    <p class="text-xs sm:text-sm text-muted max-w-md leading-relaxed">
+      Cruze notas fiscais da Cota Parlamentar, presença em plenário, votos contra o partido, funcionários e rede de fornecedores diretamente dos dados oficiais.
+    </p>
   </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
-    <div class="text-xs text-slate-400">Partidos</div>
-    <div class="text-2xl font-bold text-white mt-0.5">{{ resumo.nos.get("Partido", 0) }}</div>
-  </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
-    <div class="text-xs text-slate-400">Projetos de Lei e PECs</div>
-    <div class="text-2xl font-bold text-emerald-400 mt-0.5">{{ resumo.nos.get("Proposicao", 0) }}</div>
-  </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
-    <div class="text-xs text-slate-400">Votações Nominais</div>
-    <div class="text-2xl font-bold text-sky-400 mt-0.5">{{ resumo.nos.get("Votacao", 0) }}</div>
-  </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
-    <div class="text-xs text-slate-400">Votos Registrados</div>
-    <div class="text-2xl font-bold text-amber-400 mt-0.5">{{ resumo.relacoes.get("VOTOU", 0) }}</div>
-  </div>
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-3.5">
-    <div class="text-xs text-slate-400">Pares com Voto Parecido</div>
-    <div class="text-2xl font-bold text-violet-400 mt-0.5">{{ resumo.relacoes.get("VOTA_COMO", 0) }}</div>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 border-t border-l border-rule bg-white">
+    <div class="border-r border-b border-rule p-3.5">
+      <div class="micro">Deputados (57ª Leg.)</div>
+      <div class="num text-2xl font-semibold text-ink mt-1.5">{{ resumo.nos.get("Deputado", 0) }}</div>
+    </div>
+    <div class="border-r border-b border-rule p-3.5">
+      <div class="micro">Partidos</div>
+      <div class="num text-2xl font-semibold text-ink mt-1.5">{{ resumo.nos.get("Partido", 0) }}</div>
+    </div>
+    <div class="border-r border-b border-rule p-3.5">
+      <div class="micro">Projetos e PECs</div>
+      <div class="num text-2xl font-semibold text-civic mt-1.5">{{ resumo.nos.get("Proposicao", 0) }}</div>
+    </div>
+    <div class="border-r border-b border-rule p-3.5">
+      <div class="micro">Votações Nominais</div>
+      <div class="num text-2xl font-semibold text-ink mt-1.5">{{ resumo.nos.get("Votacao", 0) }}</div>
+    </div>
+    <div class="border-r border-b border-rule p-3.5">
+      <div class="micro">Votos Registrados</div>
+      <div class="num text-2xl font-semibold text-ink mt-1.5">{{ resumo.relacoes.get("VOTOU", 0) }}</div>
+    </div>
+    <div class="border-r border-b border-rule p-3.5">
+      <div class="micro">Pares de Voto</div>
+      <div class="num text-2xl font-semibold text-signal mt-1.5">{{ resumo.relacoes.get("VOTA_COMO", 0) }}</div>
+    </div>
   </div>
 </section>
 
-<!-- Abas de Ferramentas -->
-<div class="flex flex-wrap gap-2 mb-5 border-b border-slate-800 pb-3">
+<!-- Navegação por Abas (scroll horizontal suave no celular) -->
+<div class="flex overflow-x-auto no-scrollbar border-b-2 border-ink mb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
   <button type="button" onclick="mostrarPainel('deputados')" id="btn-deputados"
-    class="px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white">
-    Deputados &amp; Fichas Completas
+    class="whitespace-nowrap px-4 py-3 text-xs font-mono uppercase tracking-[0.06em] font-semibold bg-ink text-paper border-r border-rule transition-colors">
+    01 · Deputados &amp; Fichas
   </button>
   <button type="button" onclick="mostrarPainel('proposicoes')" id="btn-proposicoes"
-    class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700">
-    Buscar Projetos por Assunto
+    class="whitespace-nowrap px-4 py-3 text-xs font-mono uppercase tracking-[0.06em] font-medium bg-white text-ink hover:bg-tint border-r border-t border-rule transition-colors">
+    02 · Projetos por Assunto
   </button>
   <button type="button" onclick="mostrarPainel('caminho')" id="btn-caminho"
-    class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700">
-    Conexão entre Deputados
+    class="whitespace-nowrap px-4 py-3 text-xs font-mono uppercase tracking-[0.06em] font-medium bg-white text-ink hover:bg-tint border-r border-t border-rule transition-colors">
+    03 · Conexão entre Deputados
   </button>
   <button type="button" onclick="mostrarPainel('fornecedores')" id="btn-fornecedores"
     hx-get="/ui/partials/fornecedores?ordenar=deputados_desc"
     hx-target="#fornecedores-resultado"
     hx-trigger="click once"
-    class="px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700">
-    Empresas &amp; Fornecedores (CNPJs)
+    class="whitespace-nowrap px-4 py-3 text-xs font-mono uppercase tracking-[0.06em] font-medium bg-white text-ink hover:bg-tint border-r border-t border-rule transition-colors">
+    04 · Empresas &amp; CNPJs
   </button>
 </div>
 
@@ -60,23 +74,23 @@
         hx-target="#deputados-container"
         hx-trigger="submit, change from:select, keyup changed delay:300ms from:input[name='busca']"
         hx-indicator="#loading-deps"
-        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
+        class="bg-white border border-rule p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
     <div class="lg:col-span-2">
-      <label class="block text-xs text-slate-400 mb-1">Buscar por nome</label>
+      <label class="micro block mb-1.5">Buscar por nome</label>
       <input type="text" name="busca" placeholder="Ex.: Silva, Maria, Delegado..."
-             class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500" />
+             class="w-full min-h-[40px] bg-paper border border-rule px-3 py-2 text-sm text-ink placeholder-muted focus:outline-none focus:border-ink focus:bg-white transition-colors" />
     </div>
     <div>
-      <label class="block text-xs text-slate-400 mb-1">Situação</label>
-      <select name="situacao" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+      <label class="micro block mb-1.5">Situação</label>
+      <select name="situacao" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
         <option value="em_exercicio" selected>Apenas em exercício</option>
         <option value="">Todos (57ª Leg.)</option>
         <option value="fora_exercicio">Fora de exercício</option>
       </select>
     </div>
     <div>
-      <label class="block text-xs text-slate-400 mb-1">Estado (UF)</label>
-      <select name="uf" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+      <label class="micro block mb-1.5">Estado (UF)</label>
+      <select name="uf" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
         <option value="">Todas as 27 UFs</option>
         {% for sigla, info in ufs %}
         <option value="{{ sigla }}">{{ sigla }} — {{ info.nome }}</option>
@@ -84,8 +98,8 @@
       </select>
     </div>
     <div>
-      <label class="block text-xs text-slate-400 mb-1">Partido</label>
-      <select name="partido" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+      <label class="micro block mb-1.5">Partido</label>
+      <select name="partido" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
         <option value="">Todos ({{ resumo.partidos|length }})</option>
         {% for p in resumo.partidos %}
         <option value="{{ p.sigla }}">{{ p.sigla }}</option>
@@ -93,24 +107,24 @@
       </select>
     </div>
     <div>
-      <label class="block text-xs text-slate-400 mb-1" title="Grupos formados automaticamente por quem vota de forma parecida em plenário (independente do partido)">
-        Grupo de Votação (?)
+      <label class="micro block mb-1.5" title="Grupos formados automaticamente por quem vota de forma parecida em plenário (independente do partido)">
+        Grupo de Votação ?
       </label>
-      <select name="comunidade" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+      <select name="comunidade" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
         <option value="">Todos os grupos</option>
         {% for c in resumo.comunidades %}
-        <option value="{{ c.id }}">{{ c.rotulo }} · {{ c.total }} deputados</option>
+        <option value="{{ c.id }}">{{ c.rotulo }} · {{ c.total }}</option>
         {% endfor %}
       </select>
     </div>
     <div>
-      <label class="block text-xs text-slate-400 mb-1">Ordenar por</label>
-      <select name="ordenar" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+      <label class="micro block mb-1.5">Ordenar por</label>
+      <select name="ordenar" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
         <option value="nome">Nome (A–Z)</option>
         <option value="gastos_desc">Maior gasto na Cota (R$)</option>
         <option value="viagens_desc">Maior gasto com viagens (R$)</option>
         <option value="divulgacao_desc">Maior gasto com divulgação (R$)</option>
-        <option value="aeronaves_desc">Maior gasto com aeronaves/jatinhos (R$)</option>
+        <option value="aeronaves_desc">Maior gasto com aeronaves (R$)</option>
         <option value="consultorias_desc">Maior gasto com consultorias (R$)</option>
         <option value="concentracao_desc">Maior concentração em 1 empresa (%)</option>
         <option value="custo_voto_desc">Maior custo por voto (R$/voto)</option>
@@ -123,7 +137,7 @@
     </div>
   </form>
 
-  <div id="loading-deps" class="htmx-indicator items-center gap-2 text-sm text-emerald-400 mb-3">
+  <div id="loading-deps" class="htmx-indicator items-center gap-2 text-xs font-mono uppercase tracking-[0.06em] text-signal mb-3">
     <span>Carregando deputados...</span>
   </div>
 
@@ -132,26 +146,26 @@
   </div>
 </section>
 
-<!-- Painel 2: Busca Fulltext de Proposições -->
+<!-- Painel 2: Busca de Proposições -->
 <section id="painel-proposicoes" class="hidden">
   <form hx-get="/ui/partials/proposicoes"
         hx-target="#proposicoes-resultado"
         hx-indicator="#loading-props"
-        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        class="bg-white border border-rule p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
     <div class="lg:col-span-2">
-      <label class="block text-xs text-slate-400 mb-1">Palavra-chave no texto do projeto</label>
+      <label class="micro block mb-1.5">Palavra-chave no texto do projeto</label>
       <input type="text" name="texto" placeholder="Ex.: inteligência artificial, saúde, educação..."
-             class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white" />
+             class="w-full min-h-[40px] bg-paper border border-rule px-3 py-2 text-sm text-ink placeholder-muted focus:outline-none focus:border-ink focus:bg-white" />
     </div>
     <div>
-      <label class="block text-xs text-slate-400 mb-1">Tema (contém)</label>
+      <label class="micro block mb-1.5">Tema (contém)</label>
       <input type="text" name="tema" placeholder="Ex.: Saúde, Segurança..."
-             class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white" />
+             class="w-full min-h-[40px] bg-paper border border-rule px-3 py-2 text-sm text-ink placeholder-muted focus:outline-none focus:border-ink focus:bg-white" />
     </div>
     <div>
-      <label class="block text-xs text-slate-400 mb-1">Tipo / Ano</label>
+      <label class="micro block mb-1.5">Tipo / Ano</label>
       <div class="flex gap-2">
-        <select name="tipo" class="w-1/2 rounded-lg bg-slate-950 border border-slate-700 px-2 py-2 text-sm text-white">
+        <select name="tipo" class="w-1/2 min-h-[40px] bg-paper border border-rule px-2 py-2 text-sm text-ink focus:outline-none focus:border-ink">
           <option value="">Tipo</option>
           <option value="PL">PL</option>
           <option value="PLP">PLP</option>
@@ -159,7 +173,7 @@
           <option value="PDL">PDL</option>
           <option value="PRC">PRC</option>
         </select>
-        <select name="ano" class="w-1/2 rounded-lg bg-slate-950 border border-slate-700 px-2 py-2 text-sm text-white">
+        <select name="ano" class="w-1/2 min-h-[40px] bg-paper border border-rule px-2 py-2 text-sm text-ink focus:outline-none focus:border-ink">
           <option value="">Ano</option>
           {% for y in ANOS_DISPONIVEIS %}
           <option value="{{ y }}">{{ y }}</option>
@@ -168,73 +182,73 @@
       </div>
     </div>
     <div class="flex items-end">
-      <button type="submit" class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 text-sm transition">
+      <button type="submit" class="w-full min-h-[40px] bg-ink hover:bg-signal text-paper font-mono text-xs uppercase tracking-[0.06em] font-semibold py-2 transition-colors">
         Pesquisar
       </button>
     </div>
   </form>
-  <div id="loading-props" class="htmx-indicator text-sm text-emerald-400 mb-3">Pesquisando proposições...</div>
-  <div id="proposicoes-resultado" class="text-sm text-slate-400">
-    Digite um termo ou escolha um filtro acima para buscar nas 26.796 proposições carregadas.
+  <div id="loading-props" class="htmx-indicator text-xs font-mono uppercase tracking-[0.06em] text-signal mb-3">Pesquisando proposições...</div>
+  <div id="proposicoes-resultado" class="bg-white border border-rule p-6 text-sm text-muted">
+    Digite um termo ou escolha um filtro acima para buscar nos <strong class="text-ink num">{{ resumo.nos.get("Proposicao", 0) }}</strong> projetos carregados.
   </div>
 </section>
 
-<!-- Painel 3: Menor Caminho por Coautoria -->
+<!-- Painel 3: Conexão entre Deputados -->
 <section id="painel-caminho" class="hidden">
   <form hx-get="/ui/partials/caminho"
         hx-target="#caminho-resultado"
         hx-indicator="#loading-caminho"
-        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+        class="bg-white border border-rule p-4 mb-5 grid grid-cols-1 md:grid-cols-3 gap-3">
     <div>
-      <label class="block text-xs text-slate-400 mb-1">Deputado A</label>
-      <select name="deputado_a" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white">
+      <label class="micro block mb-1.5">Deputado A</label>
+      <select name="deputado_a" required class="w-full min-h-[40px] bg-paper border border-rule px-3 py-2 text-sm text-ink focus:outline-none focus:border-ink">
         {% for d in todos_deps %}
         <option value="{{ d.id }}" {% if d.id == 220593 %}selected{% endif %}>{{ d.nome }} ({{ d.partidos|join('/') }} - {{ d.uf }})</option>
         {% endfor %}
       </select>
     </div>
     <div>
-      <label class="block text-xs text-slate-400 mb-1">Deputado B</label>
-      <select name="deputado_b" required class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white">
+      <label class="micro block mb-1.5">Deputado B</label>
+      <select name="deputado_b" required class="w-full min-h-[40px] bg-paper border border-rule px-3 py-2 text-sm text-ink focus:outline-none focus:border-ink">
         {% for d in todos_deps %}
         <option value="{{ d.id }}" {% if d.id == 204501 %}selected{% endif %}>{{ d.nome }} ({{ d.partidos|join('/') }} - {{ d.uf }})</option>
         {% endfor %}
       </select>
     </div>
     <div class="flex items-end">
-      <button type="submit" class="w-full rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 text-sm transition">
+      <button type="submit" class="w-full min-h-[40px] bg-ink hover:bg-signal text-paper font-mono text-xs uppercase tracking-[0.06em] font-semibold py-2 transition-colors">
         Descobrir Conexão
       </button>
     </div>
   </form>
-  <div id="loading-caminho" class="htmx-indicator text-sm text-emerald-400 mb-3">Calculando ligação entre os deputados...</div>
-  <div id="caminho-resultado" class="text-sm text-slate-400">
-    Escolha dois deputados para descobrir o menor caminho de coautoria entre eles no grafo.
+  <div id="loading-caminho" class="htmx-indicator text-xs font-mono uppercase tracking-[0.06em] text-signal mb-3">Calculando ligação entre os deputados...</div>
+  <div id="caminho-resultado" class="bg-white border border-rule p-6 text-sm text-muted">
+    Escolha dois deputados para descobrir quantos passos de coautoria separam os dois e o quanto realmente votam igual em plenário.
   </div>
 </section>
 
-<!-- Painel 4: Rede de Empresas & Fornecedores (CNPJs) -->
+<!-- Painel 4: Rede de Empresas & Fornecedores -->
 <section id="painel-fornecedores" class="hidden">
   <form hx-get="/ui/partials/fornecedores"
         hx-target="#fornecedores-resultado"
         hx-trigger="submit, change from:select, keyup changed delay:300ms from:input[name='busca']"
         hx-indicator="#loading-forn"
-        class="bg-slate-900 border border-slate-800 rounded-xl p-4 mb-5 grid grid-cols-1 md:grid-cols-3 gap-3">
+        class="bg-white border border-rule p-4 mb-5 grid grid-cols-1 md:grid-cols-3 gap-3">
     <div class="md:col-span-2">
-      <label class="block text-xs text-slate-400 mb-1">Buscar empresa por nome ou CNPJ (somente números)</label>
+      <label class="micro block mb-1.5">Buscar empresa por nome ou CNPJ (somente números)</label>
       <input type="text" name="busca" placeholder="Ex.: TAM, GOL, Locadora, 02012862000160..."
-             class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white" />
+             class="w-full min-h-[40px] bg-paper border border-rule px-3 py-2 text-sm text-ink placeholder-muted focus:outline-none focus:border-ink focus:bg-white" />
     </div>
     <div>
-      <label class="block text-xs text-slate-400 mb-1">Ordenar empresas por</label>
-      <select name="ordenar" class="w-full rounded-lg bg-slate-950 border border-slate-700 px-3 py-2 text-sm text-white">
+      <label class="micro block mb-1.5">Ordenar empresas por</label>
+      <select name="ordenar" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink">
         <option value="deputados_desc">Mais deputados atendidos (rede compartilhada)</option>
         <option value="valor_desc">Maior valor total recebido (R$)</option>
       </select>
     </div>
   </form>
-  <div id="loading-forn" class="htmx-indicator text-sm text-emerald-400 mb-3">Consultando rede de fornecedores no Neo4j...</div>
-  <div id="fornecedores-resultado" class="text-sm text-slate-400">Carregando fornecedores...</div>
+  <div id="loading-forn" class="htmx-indicator text-xs font-mono uppercase tracking-[0.06em] text-signal mb-3">Consultando rede de fornecedores...</div>
+  <div id="fornecedores-resultado" class="bg-white border border-rule p-6 text-sm text-muted">Carregando fornecedores...</div>
 </section>
 
 <script>
@@ -243,9 +257,9 @@ function mostrarPainel(nome) {
     document.getElementById('painel-' + p).classList.toggle('hidden', p !== nome);
     const btn = document.getElementById('btn-' + p);
     if (p === nome) {
-      btn.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-emerald-600 text-white';
+      btn.className = 'whitespace-nowrap px-4 py-3 text-xs font-mono uppercase tracking-[0.06em] font-semibold bg-ink text-paper border-r border-rule transition-colors';
     } else {
-      btn.className = 'px-4 py-2 rounded-lg text-sm font-medium bg-slate-800 text-slate-300 hover:bg-slate-700';
+      btn.className = 'whitespace-nowrap px-4 py-3 text-xs font-mono uppercase tracking-[0.06em] font-medium bg-white text-ink hover:bg-tint border-r border-t border-rule transition-colors';
     }
   });
 }

@@ -1,48 +1,48 @@
 <div class="space-y-5">
   {% if erro %}
-  <div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl p-4 text-sm">{{ erro }}</div>
+  <div class="bg-red-50 border border-signal text-signal p-4 text-xs font-mono">{{ erro }}</div>
   {% endif %}
 
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <h2 class="font-semibold text-white mb-2.5 text-sm">Profissões</h2>
+    <div class="bg-white border border-rule p-4">
+      <h2 class="font-bold text-ink text-sm pb-2 mb-3 border-b-2 border-ink">Profissões</h2>
       {% if not carreira.profissoes %}
-      <p class="text-xs text-slate-400">Não informado.</p>
+      <p class="text-xs text-muted">Não informado.</p>
       {% else %}
       <div class="flex flex-wrap gap-1.5">
         {% for p in carreira.profissoes %}
-        <span class="px-2.5 py-1 rounded-lg bg-slate-800 text-xs text-slate-200">{{ p.titulo }}</span>
+        <span class="px-2.5 py-1 bg-paper border border-rule text-xs text-ink">{{ p.titulo }}</span>
         {% endfor %}
       </div>
       {% endif %}
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <h2 class="font-semibold text-white mb-2.5 text-sm">Ocupações Anteriores</h2>
+    <div class="bg-white border border-rule p-4">
+      <h2 class="font-bold text-ink text-sm pb-2 mb-3 border-b-2 border-ink">Ocupações Anteriores</h2>
       {% if not carreira.ocupacoes %}
-      <p class="text-xs text-slate-400">Não informado.</p>
+      <p class="text-xs text-muted">Não informado.</p>
       {% else %}
-      <div class="space-y-2 text-xs">
+      <div class="divide-y divide-rule text-xs">
         {% for o in carreira.ocupacoes %}
-        <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-2.5">
-          <div class="text-white font-medium">{{ o.titulo }}</div>
-          <div class="text-slate-400">{{ o.entidade or '' }}{% if o.anoInicio %} ({{ o.anoInicio }}–{{ o.anoFim or 'atual' }}){% endif %}</div>
+        <div class="py-2">
+          <div class="text-ink font-semibold">{{ o.titulo }}</div>
+          <div class="text-muted font-mono text-[11px]">{{ o.entidade or '' }}{% if o.anoInicio %} ({{ o.anoInicio }}–{{ o.anoFim or 'atual' }}){% endif %}</div>
         </div>
         {% endfor %}
       </div>
       {% endif %}
     </div>
 
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <h2 class="font-semibold text-white mb-2.5 text-sm">Mandatos Externos</h2>
+    <div class="bg-white border border-rule p-4">
+      <h2 class="font-bold text-ink text-sm pb-2 mb-3 border-b-2 border-ink">Mandatos Externos</h2>
       {% if not carreira.mandatos_externos %}
-      <p class="text-xs text-slate-400">Nenhum mandato externo registrado.</p>
+      <p class="text-xs text-muted">Nenhum mandato externo registrado.</p>
       {% else %}
-      <div class="space-y-2 text-xs">
+      <div class="divide-y divide-rule text-xs">
         {% for m in carreira.mandatos_externos %}
-        <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-2.5">
-          <div class="text-white font-medium">{{ m.cargo }} ({{ m.siglaPartidoEleicao or '—' }})</div>
-          <div class="text-slate-400">{{ m.municipio or '' }}/{{ m.siglaUf or '' }} · {{ m.anoInicio }}–{{ m.anoFim or '' }}</div>
+        <div class="py-2">
+          <div class="text-ink font-semibold">{{ m.cargo }} <span class="font-mono text-muted">({{ m.siglaPartidoEleicao or '—' }})</span></div>
+          <div class="text-muted font-mono text-[11px]">{{ m.municipio or '' }}/{{ m.siglaUf or '' }} · {{ m.anoInicio }}–{{ m.anoFim or '' }}</div>
         </div>
         {% endfor %}
       </div>
@@ -51,19 +51,19 @@
   </div>
 
   <!-- Histórico de Mandato e Filiações -->
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <h2 class="font-semibold text-white mb-3 text-sm">Histórico de Filiações e Situação na Câmara ({{ carreira.historico|length }})</h2>
+  <div class="bg-white border border-rule p-4">
+    <h2 class="font-bold text-ink text-sm pb-2.5 mb-3 border-b-2 border-ink">Histórico de Filiações e Situação na Câmara (<span class="num">{{ carreira.historico|length }}</span>)</h2>
     {% if not carreira.historico %}
-    <p class="text-xs text-slate-400">Sem histórico disponível.</p>
+    <p class="text-xs text-muted">Sem histórico disponível.</p>
     {% else %}
-    <div class="space-y-2 max-h-96 overflow-y-auto pr-1 text-xs">
+    <div class="divide-y divide-rule max-h-96 overflow-y-auto pr-1 text-xs">
       {% for h in carreira.historico %}
-      <div class="flex flex-wrap items-center justify-between gap-2 bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2">
+      <div class="flex flex-wrap items-center justify-between gap-2 py-2">
         <div>
-          <span class="font-semibold text-emerald-300">{{ h.siglaPartido or '—' }}</span>
-          <span class="text-slate-300 ml-2">{{ h.descricaoStatus or h.situacao or '' }}</span>
+          <span class="font-mono font-semibold text-ink px-1.5 py-0.5 bg-paper border border-rule">{{ h.siglaPartido or '—' }}</span>
+          <span class="text-ink ml-2">{{ h.descricaoStatus or h.situacao or '' }}</span>
         </div>
-        <span class="text-slate-500 whitespace-nowrap">{{ h.dataHora|data_br }} · Leg. {{ h.idLegislatura }}</span>
+        <span class="font-mono text-[11px] text-muted whitespace-nowrap">{{ h.dataHora|data_br }} · Leg. {{ h.idLegislatura }}</span>
       </div>
       {% endfor %}
     </div>

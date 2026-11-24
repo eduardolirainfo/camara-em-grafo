@@ -1,23 +1,26 @@
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
   <!-- Coautores -->
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <h2 class="font-semibold text-white mb-3">Principais Coautores (Proposições em Comum)</h2>
+  <div class="bg-white border border-rule p-4">
+    <div class="pb-2.5 mb-3 border-b-2 border-ink flex items-center justify-between">
+      <h2 class="font-bold text-ink text-sm tracking-[-0.01em]">Principais Coautores</h2>
+      <span class="micro">Projetos em comum</span>
+    </div>
     {% if not aliancas.coautores %}
-    <p class="text-sm text-slate-400">Sem registros de coautoria no recorte atual.</p>
+    <p class="text-xs text-muted">Sem registros de coautoria no recorte atual.</p>
     {% else %}
-    <div class="space-y-2">
+    <div class="divide-y divide-rule">
       {% for c in aliancas.coautores %}
-      <a href="/ui/deputado/{{ c.id }}" class="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-800/80 transition">
+      <a href="/ui/deputado/{{ c.id }}" class="flex items-center justify-between gap-3 py-2 hover:bg-paper px-1.5 -mx-1.5 transition-colors">
         <div class="flex items-center gap-2.5 min-w-0">
           <img src="{{ c.urlFoto or '' }}" alt="{{ c.nome }}" loading="lazy"
                onerror="this.src='https://www.camara.leg.br/tema/assets/images/foto-deputado-ausente.png'"
-               class="w-9 h-11 rounded object-cover bg-slate-800 shrink-0" />
+               class="w-9 h-11 object-cover bg-tint border border-rule shrink-0" />
           <div class="min-w-0">
-            <div class="text-sm font-medium text-white truncate">{{ c.nome }}</div>
-            <div class="text-xs text-slate-400">{{ c.partidos|join('/') }} · {{ c.uf }}</div>
+            <div class="text-sm font-semibold text-ink truncate">{{ c.nome }}</div>
+            <div class="text-xs font-mono text-muted">{{ c.partidos|join('/') }} · {{ c.uf }}</div>
           </div>
         </div>
-        <span class="px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-300 text-xs font-semibold shrink-0">{{ c.n }} projetos</span>
+        <span class="px-2 py-0.5 bg-paper border border-rule num text-xs font-semibold text-civic shrink-0">{{ c.n }} proj.</span>
       </a>
       {% endfor %}
     </div>
@@ -25,26 +28,29 @@
   </div>
 
   <!-- Quem vota mais parecido -->
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <h2 class="font-semibold text-white mb-3">Quem Vota Mais Parecido (≥ 50 votações em comum)</h2>
+  <div class="bg-white border border-rule p-4">
+    <div class="pb-2.5 mb-3 border-b-2 border-ink flex items-center justify-between">
+      <h2 class="font-bold text-ink text-sm tracking-[-0.01em]">Quem Vota Mais Parecido</h2>
+      <span class="micro">≥ 50 votações juntos</span>
+    </div>
     {% if not aliancas.vota_como %}
-    <p class="text-sm text-slate-400">Sem pares com 50 ou mais votações em comum.</p>
+    <p class="text-xs text-muted">Sem pares com 50 ou mais votações em comum.</p>
     {% else %}
-    <div class="space-y-2">
+    <div class="divide-y divide-rule">
       {% for v in aliancas.vota_como %}
-      <a href="/ui/deputado/{{ v.id }}" class="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-800/80 transition">
+      <a href="/ui/deputado/{{ v.id }}" class="flex items-center justify-between gap-3 py-2 hover:bg-paper px-1.5 -mx-1.5 transition-colors">
         <div class="flex items-center gap-2.5 min-w-0">
           <img src="{{ v.urlFoto or '' }}" alt="{{ v.nome }}" loading="lazy"
                onerror="this.src='https://www.camara.leg.br/tema/assets/images/foto-deputado-ausente.png'"
-               class="w-9 h-11 rounded object-cover bg-slate-800 shrink-0" />
+               class="w-9 h-11 object-cover bg-tint border border-rule shrink-0" />
           <div class="min-w-0">
-            <div class="text-sm font-medium text-white truncate">{{ v.nome }}</div>
-            <div class="text-xs text-slate-400">{{ v.partidos|join('/') }} · {{ v.uf }}</div>
+            <div class="text-sm font-semibold text-ink truncate">{{ v.nome }}</div>
+            <div class="text-xs font-mono text-muted">{{ v.partidos|join('/') }} · {{ v.uf }}</div>
           </div>
         </div>
         <div class="text-right shrink-0">
-          <div class="text-xs font-semibold text-sky-300">{{ v.concordancia|pct }}</div>
-          <div class="text-[11px] text-slate-500">{{ v.votacoesEmComum }} votações</div>
+          <div class="num text-xs font-semibold text-ink">{{ v.concordancia|pct }}</div>
+          <div class="num text-[11px] text-muted">{{ v.votacoesEmComum }} vot.</div>
         </div>
       </a>
       {% endfor %}
@@ -53,21 +59,24 @@
   </div>
 
   <!-- Votos contra orientação do partido -->
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <h2 class="font-semibold text-white mb-3">Votos Contra a Orientação do Próprio Partido</h2>
+  <div class="bg-white border border-rule p-4">
+    <div class="pb-2.5 mb-3 border-b-2 border-ink flex items-center justify-between">
+      <h2 class="font-bold text-ink text-sm tracking-[-0.01em]">Votos Contra o Próprio Partido</h2>
+      <span class="micro">Divergência</span>
+    </div>
     {% if not aliancas.contra_orientacao %}
-    <p class="text-sm text-slate-400">Nenhum voto divergente registrado nas votações orientadas.</p>
+    <p class="text-xs text-muted">Nenhum voto divergente registrado nas votações orientadas.</p>
     {% else %}
-    <div class="space-y-2.5">
+    <div class="space-y-3">
       {% for co in aliancas.contra_orientacao %}
-      <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3">
+      <div class="bg-paper border border-rule p-3">
         <div class="flex items-center justify-between text-sm">
-          <span class="font-semibold text-white">{{ co.sigla }} <span class="text-xs text-slate-400 font-normal">({{ co.nome }})</span></span>
-          <span class="font-bold text-amber-400">{{ co.taxaDivergencia|pct }}</span>
+          <span class="font-mono font-bold text-ink">{{ co.sigla }} <span class="font-sans text-xs text-muted font-normal">({{ co.nome }})</span></span>
+          <span class="num font-bold text-signal">{{ co.taxaDivergencia|pct }}</span>
         </div>
-        <div class="text-xs text-slate-400 mt-1">{{ co.contra }} votos contra em {{ co.totalOrientadas }} votações com orientação direcional.</div>
-        <div class="w-full h-1.5 bg-slate-800 rounded-full mt-2 overflow-hidden">
-          <div class="h-full bg-amber-500 rounded-full" style="width: {{ (co.taxaDivergencia * 100)|round(1) }}%"></div>
+        <div class="text-xs text-muted mt-1">{{ co.contra }} votos contra em {{ co.totalOrientadas }} votações com orientação direcional.</div>
+        <div class="w-full h-1.5 bg-rule mt-2 overflow-hidden">
+          <div class="h-full bg-signal" style="width: {{ (co.taxaDivergencia * 100)|round(1) }}%"></div>
         </div>
       </div>
       {% endfor %}
@@ -76,24 +85,27 @@
   </div>
 
   <!-- Pauta temática similar -->
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <h2 class="font-semibold text-white mb-3">Quem Trabalha nos Mesmos Assuntos</h2>
+  <div class="bg-white border border-rule p-4">
+    <div class="pb-2.5 mb-3 border-b-2 border-ink flex items-center justify-between">
+      <h2 class="font-bold text-ink text-sm tracking-[-0.01em]">Mesmos Assuntos Legislativos</h2>
+      <span class="micro">Afinidade de pauta</span>
+    </div>
     {% if not aliancas.temas_similares %}
-    <p class="text-sm text-slate-400">Sem pares temáticos acima do limiar.</p>
+    <p class="text-xs text-muted">Sem pares temáticos acima do limiar.</p>
     {% else %}
-    <div class="space-y-2">
+    <div class="divide-y divide-rule">
       {% for t in aliancas.temas_similares %}
-      <a href="/ui/deputado/{{ t.id }}" class="flex items-center justify-between gap-3 p-2 rounded-lg hover:bg-slate-800/80 transition">
+      <a href="/ui/deputado/{{ t.id }}" class="flex items-center justify-between gap-3 py-2 hover:bg-paper px-1.5 -mx-1.5 transition-colors">
         <div class="flex items-center gap-2.5 min-w-0">
           <img src="{{ t.urlFoto or '' }}" alt="{{ t.nome }}" loading="lazy"
                onerror="this.src='https://www.camara.leg.br/tema/assets/images/foto-deputado-ausente.png'"
-               class="w-9 h-11 rounded object-cover bg-slate-800 shrink-0" />
+               class="w-9 h-11 object-cover bg-tint border border-rule shrink-0" />
           <div class="min-w-0">
-            <div class="text-sm font-medium text-white truncate">{{ t.nome }}</div>
-            <div class="text-xs text-slate-400">{{ t.partidos|join('/') }} · {{ t.uf }}</div>
+            <div class="text-sm font-semibold text-ink truncate">{{ t.nome }}</div>
+            <div class="text-xs font-mono text-muted">{{ t.partidos|join('/') }} · {{ t.uf }}</div>
           </div>
         </div>
-        <span class="px-2 py-0.5 rounded bg-violet-500/15 text-violet-300 text-xs font-semibold shrink-0">{{ t.similaridade|pct }}</span>
+        <span class="px-2 py-0.5 bg-paper border border-rule num text-xs font-semibold text-ink shrink-0">{{ t.similaridade|pct }}</span>
       </a>
       {% endfor %}
     </div>

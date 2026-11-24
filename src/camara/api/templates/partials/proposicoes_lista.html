@@ -1,85 +1,84 @@
 {% if not proposicoes %}
-<div class="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center text-slate-400">
+<div class="bg-white border border-rule p-8 text-center text-sm text-muted">
   Nenhum projeto encontrado para os filtros informados.
 </div>
 {% else %}
 <div class="space-y-3">
   {% for p in proposicoes %}
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+  <div class="bg-white border border-rule p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
       <div class="flex flex-wrap items-center gap-1.5">
-        <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
+        <span class="px-2 py-0.5 bg-ink text-paper font-mono text-xs font-semibold">
           {{ p.siglaTipo }} {{ p.numero }}/{{ p.ano }}
         </span>
         {% if p.dataApresentacao %}
-        <span class="text-xs text-slate-500">Apresentado em {{ p.dataApresentacao|data_br }}</span>
+        <span class="font-mono text-xs text-muted">{{ p.dataApresentacao|data_br }}</span>
         {% endif %}
         {% for t in p.temas %}
-        <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-xs">{{ t.nome }}</span>
+        <span class="px-2 py-0.5 bg-paper border border-rule text-muted text-[11px]">{{ t.nome }}</span>
         {% endfor %}
       </div>
-      <div class="flex items-center gap-3 text-xs">
+      <div class="flex items-center gap-3 font-mono text-xs">
         <button hx-get="/ui/partials/proposicao/{{ p.id }}/status"
                 hx-target="#status-prop-{{ p.id }}"
                 hx-swap="innerHTML"
-                class="text-emerald-400 hover:text-emerald-300 font-medium">
-          Ver situação atual ↻
+                class="text-ink underline underline-offset-2 hover:text-signal font-medium">
+          Situação atual ↻
         </button>
         <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ p.id }}"
-           target="_blank" class="text-sky-400 hover:underline">
+           target="_blank" class="text-cobalt underline underline-offset-2 hover:text-signal">
           Fonte oficial ↗
         </a>
       </div>
     </div>
 
-    <p class="text-sm text-slate-200 leading-relaxed">{{ p.ementa }}</p>
+    <p class="text-sm text-ink leading-relaxed">{{ p.ementa }}</p>
 
-    <!-- Votações nominais registradas no grafo -->
     {% if p.votacoes %}
-    <div class="mt-2.5 space-y-1.5">
+    <div class="mt-3 space-y-2">
       {% for v in p.votacoes[:2] %}
-      <div class="bg-slate-950/70 border border-slate-800 rounded-lg px-3 py-2 text-xs">
+      <div class="bg-paper border border-rule px-3 py-2 text-xs">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center gap-2">
             {% if v.aprovacao is sameas true %}
-            <span class="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300 font-semibold">Votado · Aprovado</span>
+            <span class="px-1.5 py-0.5 bg-civic text-white font-mono text-[10px] uppercase tracking-[0.06em] font-semibold">Aprovado</span>
             {% elif v.aprovacao is sameas false %}
-            <span class="px-2 py-0.5 rounded bg-rose-500/20 text-rose-300 font-semibold">Votado · Rejeitado</span>
+            <span class="px-1.5 py-0.5 bg-signal text-white font-mono text-[10px] uppercase tracking-[0.06em] font-semibold">Rejeitado</span>
             {% else %}
-            <span class="px-2 py-0.5 rounded bg-sky-500/20 text-sky-300 font-semibold">Votação Nominal</span>
+            <span class="px-1.5 py-0.5 bg-ink text-paper font-mono text-[10px] uppercase tracking-[0.06em] font-semibold">Votado</span>
             {% endif %}
-            <span class="text-slate-400">{{ v.data|data_br }} ({{ v.siglaOrgao }})</span>
+            <span class="font-mono text-muted">{{ v.data|data_br }} · {{ v.siglaOrgao }}</span>
           </div>
           {% if v.pctSim is not none %}
-          <span class="text-slate-200 font-medium">
-            Sim: <strong class="text-emerald-400">{{ v.votosSim }}</strong> ·
-            Não: <strong class="text-rose-400">{{ v.votosNao }}</strong>
+          <span class="num text-ink">
+            Sim: <strong class="text-civic">{{ v.votosSim }}</strong> ·
+            Não: <strong class="text-signal">{{ v.votosNao }}</strong>
             ({{ v.pctSim }}% Sim)
           </span>
           {% endif %}
         </div>
         {% if v.pctSim is not none %}
-        <div class="w-full h-1.5 bg-rose-500/40 rounded-full mt-1.5 overflow-hidden">
-          <div class="h-full bg-emerald-500" style="width: {{ v.pctSim }}%"></div>
+        <div class="w-full h-1.5 bg-signal/25 mt-2 overflow-hidden">
+          <div class="h-full bg-civic" style="width: {{ v.pctSim }}%"></div>
         </div>
         {% endif %}
       </div>
       {% endfor %}
     </div>
     {% else %}
-    <div class="mt-2 text-[11px] text-slate-500">
-      Sem votação nominal em plenário registrada até o momento (clique em <em>Ver situação atual</em> para conferir o andamento nas comissões).
+    <div class="mt-2 text-xs text-muted">
+      Sem votação nominal registrada (clique em <em>Situação atual</em> para consultar a tramitação).
     </div>
     {% endif %}
 
     <div id="status-prop-{{ p.id }}"></div>
 
     {% if p.autores %}
-    <div class="flex flex-wrap items-center gap-1.5 mt-2.5 text-xs text-slate-400">
-      <span>Autores:</span>
+    <div class="flex flex-wrap items-center gap-1.5 mt-3 pt-2.5 border-t border-rule text-xs">
+      <span class="micro mr-1">Autores:</span>
       {% for a in p.autores %}
-      <a href="/ui/deputado/{{ a.id }}" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200">
-        {{ a.nome }} ({{ a.uf }})
+      <a href="/ui/deputado/{{ a.id }}" class="px-2 py-0.5 bg-paper border border-rule hover:border-ink text-ink transition-colors">
+        {{ a.nome }} <span class="font-mono text-muted">({{ a.uf }})</span>
       </a>
       {% endfor %}
     </div>

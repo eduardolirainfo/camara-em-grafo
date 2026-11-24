@@ -1,36 +1,36 @@
 {% if not fornecedores %}
-<div class="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center text-slate-400">
+<div class="bg-white border border-rule p-8 text-center text-sm text-muted">
   Nenhuma empresa encontrada com esse filtro.
 </div>
 {% else %}
 <div class="space-y-3">
   {% for f in fornecedores %}
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+  <div class="bg-white border border-rule p-4">
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h3 class="font-semibold text-white text-sm">{{ f.nome }}</h3>
-        <div class="text-xs text-slate-400 mt-0.5">
-          CNPJ/CPF: <code class="text-slate-300">{{ f.cnpj }}</code> · {{ f.totalNotas }} nota(s) fiscal(is)
+        <h3 class="font-bold text-ink text-sm tracking-[-0.01em]">{{ f.nome }}</h3>
+        <div class="text-xs font-mono text-muted mt-0.5">
+          CNPJ/CPF: <span class="text-ink">{{ f.cnpj }}</span> · {{ f.totalNotas }} nota(s)
         </div>
       </div>
-      <div class="flex items-center gap-2 text-xs">
-        <span class="px-2.5 py-1 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 font-semibold">
+      <div class="flex items-center gap-2 font-mono text-xs">
+        <span class="px-2.5 py-1 bg-paper border border-rule text-civic font-semibold num">
           {{ f.totalRecebido|brl }}
         </span>
-        <span class="px-2.5 py-1 rounded-lg bg-violet-500/15 border border-violet-500/30 text-violet-300 font-semibold">
-          {{ f.qtdDeputados }} deputado(s)
+        <span class="px-2.5 py-1 bg-ink text-paper font-semibold num">
+          {{ f.qtdDeputados }} dep.
         </span>
       </div>
     </div>
 
     {% if f.topDeputados %}
-    <div class="flex flex-wrap items-center gap-1.5 mt-3 pt-2.5 border-t border-slate-800/80 text-xs">
-      <span class="text-slate-500">Maiores pagadores:</span>
+    <div class="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-rule text-xs">
+      <span class="micro mr-1">Maiores pagadores:</span>
       {% for d in f.topDeputados %}
       <a href="/ui/deputado/{{ d.id }}"
-         class="px-2 py-1 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-emerald-500/50 text-slate-200 transition">
-        {{ d.nome }} <span class="text-slate-400">({{ d.partidos|join('/') }}/{{ d.uf }})</span>
-        · <strong class="text-emerald-400">{{ d.valor|brl_curto }}</strong>
+         class="px-2 py-1 bg-paper border border-rule hover:border-ink text-ink transition-colors">
+        {{ d.nome }} <span class="text-muted font-mono">({{ d.partidos|join('/') }}/{{ d.uf }})</span>
+        · <strong class="num text-civic">{{ d.valor|brl_curto }}</strong>
       </a>
       {% endfor %}
     </div>

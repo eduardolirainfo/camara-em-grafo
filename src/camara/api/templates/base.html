@@ -4,51 +4,102 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}Câmara em Grafo{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'Helvetica Neue', 'Arial', 'sans-serif'],
+            mono: ['IBM Plex Mono', 'ui-monospace', 'SFMono-Regular', 'monospace'],
+          },
+          colors: {
+            paper: '#F5F3EE',
+            tint: '#ECE9E1',
+            rule: '#D8D4CA',
+            ink: '#141413',
+            muted: '#666259',
+            signal: '#C83226',
+            civic: '#155E34',
+            ochre: '#9A5B06',
+            cobalt: '#1D4ED8',
+          }
+        }
+      }
+    };
+  </script>
   <script src="https://unpkg.com/htmx.org@2.0.4"></script>
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
   <style>
+    html { font-feature-settings: "cv02", "cv03", "cv04", "cv11"; }
+    body { background: #F5F3EE; color: #141413; -webkit-font-smoothing: antialiased; }
+    .num { font-family: 'IBM Plex Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+    .micro {
+      font-family: 'IBM Plex Mono', ui-monospace, monospace;
+      font-size: 10px;
+      line-height: 1.2;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #666259;
+    }
     .htmx-indicator { display: none; }
     .htmx-request .htmx-indicator, .htmx-request.htmx-indicator { display: inline-flex; }
     .tip-wrap { position: relative; }
     .tip-box {
       visibility: hidden; opacity: 0; pointer-events: none;
-      position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
-      width: 220px; z-index: 50;
-      background: #0f172a; color: #e2e8f0; border: 1px solid #334155;
-      border-radius: 0.5rem; padding: 0.45rem 0.6rem;
-      font-size: 11px; line-height: 1.35; text-align: left; font-weight: 400;
-      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6);
-      transition: opacity 0.12s ease;
+      position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%);
+      width: 232px; max-width: calc(100vw - 2rem); z-index: 60;
+      background: #141413; color: #F5F3EE; border: 1px solid #141413;
+      padding: 0.55rem 0.7rem;
+      font-family: 'Inter', sans-serif;
+      font-size: 11px; line-height: 1.4; text-align: left; font-weight: 400;
+      transition: opacity 0.1s ease;
     }
-    .tip-wrap:hover .tip-box { visibility: visible; opacity: 1; }
+    .tip-wrap:hover .tip-box, .tip-wrap:focus-within .tip-box { visibility: visible; opacity: 1; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
-  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-      <a href="/ui" class="flex items-center gap-2.5">
-        <span class="w-8 h-8 rounded-lg bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400 font-bold">CG</span>
+<body class="bg-paper text-ink min-h-screen flex flex-col font-sans">
+  <header class="bg-white border-b-2 border-ink sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-wrap items-center justify-between gap-3">
+      <a href="/ui" class="flex items-center gap-3 group">
+        <span class="w-9 h-9 bg-ink text-paper flex items-center justify-center font-mono font-semibold text-sm tracking-tight group-hover:bg-signal transition-colors">
+          CG
+        </span>
         <div>
-          <div class="font-semibold text-white leading-tight">Câmara em Grafo</div>
-          <div class="text-xs text-slate-400">57ª Legislatura (2023–2027) · Dados Abertos Oficiais</div>
+          <div class="font-extrabold text-ink text-base sm:text-lg tracking-[-0.03em] leading-none">
+            Câmara em Grafo
+          </div>
+          <div class="micro mt-1">
+            57ª Legislatura · 2023–2027 · Dados Abertos
+          </div>
         </div>
       </a>
-      <nav class="flex items-center gap-2 text-sm">
-        <a href="/ui" class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 transition">Explorador</a>
-        <a href="/graphql" target="_blank" class="px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-300 transition">API (GraphQL)</a>
-        <a href="/health" target="_blank" class="px-3 py-1.5 rounded-lg border border-slate-700 hover:bg-slate-800 text-slate-400 transition">Situação</a>
+      <nav class="flex items-center gap-1.5 sm:gap-2 text-xs font-mono uppercase tracking-[0.06em]">
+        <a href="/ui" class="px-3 py-2 bg-ink text-paper hover:bg-signal transition-colors">Explorador</a>
+        <a href="/graphql" target="_blank" class="px-3 py-2 border border-rule bg-white text-ink hover:border-ink transition-colors">API GraphQL ↗</a>
+        <a href="/health" target="_blank" class="px-3 py-2 border border-rule bg-white text-muted hover:border-ink hover:text-ink transition-colors">Status</a>
       </nav>
     </div>
   </header>
 
-  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 flex-1">
+  <main class="max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 flex-1">
     {% block content %}{% endblock %}
   </main>
 
-  <footer class="border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
-    Fonte oficial: <a href="https://dadosabertos.camara.leg.br/" target="_blank" class="text-slate-400 hover:text-emerald-400 underline">Dados Abertos da Câmara dos Deputados</a>.
-    Projeto de estudo e utilidade pública: exibe relações e registros oficiais sem atribuir intenção ou juízo de valor.
+  <footer class="border-t-2 border-ink bg-white py-5 mt-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs text-muted">
+      <div>
+        Fonte oficial: <a href="https://dadosabertos.camara.leg.br/" target="_blank" class="text-ink font-medium underline underline-offset-2 hover:text-signal">Dados Abertos da Câmara dos Deputados</a>.
+      </div>
+      <div class="font-mono text-[11px]">
+        Registros públicos oficiais · Sem atribuição de juízo de valor
+      </div>
+    </div>
   </footer>
 </body>
 </html>

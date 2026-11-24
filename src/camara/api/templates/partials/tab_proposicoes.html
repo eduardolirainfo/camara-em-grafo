@@ -1,50 +1,50 @@
 <div class="space-y-3">
-  <div class="text-xs text-slate-400">Exibindo até 30 projetos mais recentes (PL, PLP, PEC, PDL e PRC).</div>
+  <div class="micro">Exibindo até 30 projetos mais recentes (PL, PLP, PEC, PDL e PRC)</div>
   {% if not proposicoes %}
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center text-sm text-slate-400">
+  <div class="bg-white border border-rule p-6 text-center text-sm text-muted">
     Nenhum projeto vinculado a este deputado no período carregado.
   </div>
   {% else %}
   {% for p in proposicoes %}
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <div class="flex flex-wrap items-center justify-between gap-2 mb-1.5">
+  <div class="bg-white border border-rule p-4">
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
       <div class="flex flex-wrap items-center gap-1.5">
-        <span class="px-2 py-0.5 rounded bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-semibold">
+        <span class="px-2 py-0.5 bg-ink text-paper font-mono text-xs font-semibold">
           {{ p.siglaTipo }} {{ p.numero }}/{{ p.ano }}
         </span>
         {% if p.dataApresentacao %}
-        <span class="text-xs text-slate-500">{{ p.dataApresentacao|data_br }}</span>
+        <span class="font-mono text-xs text-muted">{{ p.dataApresentacao|data_br }}</span>
         {% endif %}
         {% for t in p.temas %}
-        <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 text-xs">{{ t.nome }}</span>
+        <span class="px-2 py-0.5 bg-paper border border-rule text-muted text-[11px]">{{ t.nome }}</span>
         {% endfor %}
       </div>
-      <div class="flex items-center gap-3 text-xs">
+      <div class="flex items-center gap-3 font-mono text-xs">
         <button hx-get="/ui/partials/proposicao/{{ p.id }}/status"
                 hx-target="#dep-status-prop-{{ p.id }}"
                 hx-swap="innerHTML"
-                class="text-emerald-400 hover:text-emerald-300 font-medium">
-          Ver situação atual ↻
+                class="text-ink underline underline-offset-2 hover:text-signal font-medium">
+          Situação atual ↻
         </button>
         <a href="https://www.camara.leg.br/proposicoesWeb/fichadetramitacao?idProposicao={{ p.id }}"
-           target="_blank" class="text-sky-400 hover:underline">Fonte oficial ↗</a>
+           target="_blank" class="text-cobalt underline underline-offset-2 hover:text-signal">Fonte oficial ↗</a>
       </div>
     </div>
-    <p class="text-sm text-slate-200">{{ p.ementa }}</p>
+    <p class="text-sm text-ink leading-relaxed">{{ p.ementa }}</p>
 
     {% if p.votacoes %}
-    <div class="mt-2 space-y-1.5">
+    <div class="mt-2.5 space-y-1.5">
       {% for v in p.votacoes[:2] %}
-      <div class="bg-slate-950/70 border border-slate-800 rounded-lg px-3 py-2 text-xs">
+      <div class="bg-paper border border-rule px-3 py-2 text-xs">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <span>
-            {% if v.aprovacao is sameas true %}<strong class="text-emerald-300">Aprovado</strong>
-            {% elif v.aprovacao is sameas false %}<strong class="text-rose-300">Rejeitado</strong>
-            {% else %}<strong class="text-sky-300">Votado</strong>{% endif %}
-            · {{ v.data|data_br }}
+          <span class="font-mono">
+            {% if v.aprovacao is sameas true %}<strong class="text-civic uppercase">Aprovado</strong>
+            {% elif v.aprovacao is sameas false %}<strong class="text-signal uppercase">Rejeitado</strong>
+            {% else %}<strong class="text-ink uppercase">Votado</strong>{% endif %}
+            · <span class="text-muted">{{ v.data|data_br }}</span>
           </span>
           {% if v.pctSim is not none %}
-          <span>Sim: <strong class="text-emerald-400">{{ v.votosSim }}</strong> · Não: <strong class="text-rose-400">{{ v.votosNao }}</strong> ({{ v.pctSim }}% Sim)</span>
+          <span class="num">Sim: <strong class="text-civic">{{ v.votosSim }}</strong> · Não: <strong class="text-signal">{{ v.votosNao }}</strong> ({{ v.pctSim }}% Sim)</span>
           {% endif %}
         </div>
       </div>

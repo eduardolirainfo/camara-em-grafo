@@ -1,24 +1,24 @@
 <div class="space-y-5">
   {% if erro %}
-  <div class="bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl p-4 text-sm">{{ erro }}</div>
+  <div class="bg-red-50 border border-signal text-signal p-4 text-xs font-mono">{{ erro }}</div>
   {% endif %}
 
   <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
     <!-- Comissões e Órgãos -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <h2 class="font-semibold text-white mb-3">Comissões e Órgãos ({{ atuacao.orgaos|length }})</h2>
+    <div class="bg-white border border-rule p-4">
+      <h2 class="font-bold text-ink text-sm pb-2.5 mb-3 border-b-2 border-ink">Comissões e Órgãos (<span class="num">{{ atuacao.orgaos|length }}</span>)</h2>
       {% if not atuacao.orgaos %}
-      <p class="text-xs text-slate-400">Sem registros recentes.</p>
+      <p class="text-xs text-muted">Sem registros recentes.</p>
       {% else %}
-      <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+      <div class="divide-y divide-rule max-h-96 overflow-y-auto pr-1">
         {% for o in atuacao.orgaos %}
-        <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3 text-xs">
+        <div class="py-2.5 text-xs">
           <div class="flex justify-between gap-2">
-            <span class="font-semibold text-emerald-300">{{ o.siglaOrgao }}</span>
-            <span class="text-slate-400">{{ o.titulo }}</span>
+            <span class="font-mono font-semibold text-ink">{{ o.siglaOrgao }}</span>
+            <span class="font-mono text-muted">{{ o.titulo }}</span>
           </div>
-          <div class="text-slate-200 mt-0.5">{{ o.nomeOrgao }}</div>
-          <div class="text-slate-500 mt-1">{{ o.dataInicio or '' }}{% if o.dataFim %} até {{ o.dataFim }}{% else %} (atual){% endif %}</div>
+          <div class="text-ink mt-0.5">{{ o.nomeOrgao }}</div>
+          <div class="font-mono text-[11px] text-muted mt-1">{{ o.dataInicio|data_br }}{% if o.dataFim %} até {{ o.dataFim|data_br }}{% else %} · atual{% endif %}</div>
         </div>
         {% endfor %}
       </div>
@@ -26,17 +26,17 @@
     </div>
 
     <!-- Frentes Parlamentares -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <h2 class="font-semibold text-white mb-3">Frentes Parlamentares ({{ atuacao.frentes|length }})</h2>
+    <div class="bg-white border border-rule p-4">
+      <h2 class="font-bold text-ink text-sm pb-2.5 mb-3 border-b-2 border-ink">Frentes Parlamentares (<span class="num">{{ atuacao.frentes|length }}</span>)</h2>
       {% if not atuacao.frentes %}
-      <p class="text-xs text-slate-400">Nenhuma frente parlamentar registrada.</p>
+      <p class="text-xs text-muted">Nenhuma frente parlamentar registrada.</p>
       {% else %}
-      <div class="space-y-1.5 max-h-96 overflow-y-auto pr-1 text-xs">
+      <div class="divide-y divide-rule max-h-96 overflow-y-auto pr-1 text-xs">
         {% for f in atuacao.frentes[:60] %}
-        <div class="flex items-center justify-between gap-2 bg-slate-950/60 border border-slate-800 rounded-lg px-3 py-2">
-          <span class="text-slate-200">{{ f.titulo }}</span>
+        <div class="flex items-center justify-between gap-2 py-2">
+          <span class="text-ink">{{ f.titulo }}</span>
           <a href="https://www.camara.leg.br/internet/deputado/frenteDetalhe.asp?id={{ f.id }}"
-             target="_blank" class="text-sky-400 hover:underline shrink-0">↗</a>
+             target="_blank" class="font-mono text-cobalt hover:text-signal shrink-0">↗</a>
         </div>
         {% endfor %}
       </div>
@@ -45,19 +45,19 @@
   </div>
 
   <!-- Discursos Recentes -->
-  <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-    <h2 class="font-semibold text-white mb-3">Discursos Recentes em Plenário ({{ atuacao.discursos|length }})</h2>
+  <div class="bg-white border border-rule p-4">
+    <h2 class="font-bold text-ink text-sm pb-2.5 mb-3 border-b-2 border-ink">Discursos Recentes em Plenário (<span class="num">{{ atuacao.discursos|length }}</span>)</h2>
     {% if not atuacao.discursos %}
-    <p class="text-xs text-slate-400">Sem discursos recentes registrados na API.</p>
+    <p class="text-xs text-muted">Sem discursos recentes registrados na API.</p>
     {% else %}
-    <div class="space-y-3">
+    <div class="divide-y divide-rule">
       {% for disc in atuacao.discursos[:10] %}
-      <div class="bg-slate-950/60 border border-slate-800 rounded-lg p-3 text-xs">
-        <div class="flex flex-wrap justify-between gap-2 text-slate-400 mb-1">
-          <span class="font-semibold text-sky-300">{{ disc.tipoDiscurso or 'Discurso' }}</span>
-          <span>{{ disc.dataHoraInicio or '' }}</span>
+      <div class="py-3 text-xs">
+        <div class="flex flex-wrap justify-between gap-2 font-mono text-muted mb-1">
+          <span class="font-semibold text-ink uppercase">{{ disc.tipoDiscurso or 'Discurso' }}</span>
+          <span>{{ disc.dataHoraInicio|data_br }}</span>
         </div>
-        <p class="text-slate-200 leading-relaxed">{{ disc.sumario or (disc.transcricao[:350] ~ '...') if disc.transcricao else 'Sem sumário disponível.' }}</p>
+        <p class="text-ink leading-relaxed">{{ disc.sumario or (disc.transcricao[:350] ~ '...') if disc.transcricao else 'Sem sumário disponível.' }}</p>
       </div>
       {% endfor %}
     </div>
