@@ -367,7 +367,17 @@ def atualizar_indicadores_cientificos(driver: Driver) -> dict[str, int]:
             OPTIONAL MATCH (d)-[:AUTOR_DE]->(p:Proposicao)<-[:SOBRE]-(v:Votacao)
             WITH d, valoresPagos,
                  count(DISTINCT p) AS projetosVotados,
-                 count(DISTINCT CASE WHEN v.aprovacao = true THEN p END) AS projetosAprovados
+                 count(DISTINCT CASE
+                   WHEN v IS NOT NULL AND v.aprovacao = true AND NOT (
+                     toLower(coalesce(v.descricao, '')) CONTAINS 'requerimento'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'destaque'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'emenda'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'retirada de pauta'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'adiamento'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'preferência'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'inversão'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'encerramento da discussão'
+                   ) THEN p END) AS projetosAprovados
             RETURN d.id AS id,
                    d.uf AS uf,
                    coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,

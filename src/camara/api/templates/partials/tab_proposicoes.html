@@ -70,19 +70,30 @@
 
     {% if p.votacoes %}
     <div class="mt-2.5 space-y-1.5">
-      {% for v in p.votacoes[:2] %}
+      {% for v in p.votacoes[:3] %}
       <div class="bg-paper border border-rule px-3 py-2 text-xs">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <span class="font-mono">
-            {% if v.aprovacao is sameas true %}<strong class="text-civic uppercase">Aprovado</strong>
-            {% elif v.aprovacao is sameas false %}<strong class="text-signal uppercase">Rejeitado</strong>
-            {% else %}<strong class="text-ink uppercase">Votado</strong>{% endif %}
+            {% if v.ehProcedimental %}
+              <strong class="text-muted uppercase">
+                {% if v.aprovacao is sameas true %}Req./Destaque Aprovado
+                {% elif v.aprovacao is sameas false %}Req./Destaque Rejeitado
+                {% else %}Votação Procedimental{% endif %}
+              </strong>
+            {% else %}
+              {% if v.aprovacao is sameas true %}<strong class="text-civic uppercase">Mérito Aprovado</strong>
+              {% elif v.aprovacao is sameas false %}<strong class="text-signal uppercase">Mérito Rejeitado</strong>
+              {% else %}<strong class="text-ink uppercase">Votação Nominal</strong>{% endif %}
+            {% endif %}
             · <span class="text-muted">{{ v.data|data_br }}</span>
           </span>
           {% if v.pctSim is not none %}
           <span class="num">Sim: <strong class="text-civic">{{ v.votosSim }}</strong> · Não: <strong class="text-signal">{{ v.votosNao }}</strong> ({{ v.pctSim }}% Sim)</span>
           {% endif %}
         </div>
+        {% if v.descricao %}
+        <div class="text-[11px] text-muted mt-1 leading-snug">{{ v.descricao }}</div>
+        {% endif %}
       </div>
       {% endfor %}
     </div>

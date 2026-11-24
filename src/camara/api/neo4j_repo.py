@@ -344,7 +344,17 @@ class Neo4jGraphRepository:
                 votosSim: coalesce(v.votosSim, 0),
                 votosNao: coalesce(v.votosNao, 0),
                 votosOutros: coalesce(v.votosOutros, 0),
-                descricao: v.descricao
+                descricao: coalesce(v.descricao, ''),
+                ehProcedimental: (
+                    toLower(coalesce(v.descricao, '')) CONTAINS 'requerimento'
+                    OR toLower(coalesce(v.descricao, '')) CONTAINS 'destaque'
+                    OR toLower(coalesce(v.descricao, '')) CONTAINS 'emenda'
+                    OR toLower(coalesce(v.descricao, '')) CONTAINS 'retirada de pauta'
+                    OR toLower(coalesce(v.descricao, '')) CONTAINS 'adiamento'
+                    OR toLower(coalesce(v.descricao, '')) CONTAINS 'preferência'
+                    OR toLower(coalesce(v.descricao, '')) CONTAINS 'inversão'
+                    OR toLower(coalesce(v.descricao, '')) CONTAINS 'encerramento da discussão'
+                )
             }) AS votacoes
             """,
             ids=prop_ids,
@@ -777,8 +787,8 @@ class Neo4jGraphRepository:
 
         filtro_res = {
             "votados": "AND qtdVotacoes > 0",
-            "aprovados": "AND qtdAprovacoes > 0",
-            "rejeitados": "AND qtdRejeicoes > 0",
+            "aprovados": "AND qtdAprovacoesMerito > 0",
+            "rejeitados": "AND qtdRejeicoesMerito > 0",
             "sem_votacao": "AND qtdVotacoes = 0",
         }.get((resultado or "").strip().lower(), "")
 
@@ -789,8 +799,28 @@ class Neo4jGraphRepository:
             OPTIONAL MATCH (v:Votacao)-[:SOBRE]->(p)
             WITH p,
                  count(DISTINCT v) AS qtdVotacoes,
-                 count(DISTINCT CASE WHEN v.aprovacao = true THEN v END) AS qtdAprovacoes,
-                 count(DISTINCT CASE WHEN v.aprovacao = false THEN v END) AS qtdRejeicoes
+                 count(DISTINCT CASE
+                   WHEN v IS NOT NULL AND v.aprovacao = true AND NOT (
+                     toLower(coalesce(v.descricao, '')) CONTAINS 'requerimento'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'destaque'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'emenda'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'retirada de pauta'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'adiamento'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'preferência'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'inversão'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'encerramento da discussão'
+                   ) THEN v END) AS qtdAprovacoesMerito,
+                 count(DISTINCT CASE
+                   WHEN v IS NOT NULL AND v.aprovacao = false AND NOT (
+                     toLower(coalesce(v.descricao, '')) CONTAINS 'requerimento'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'destaque'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'emenda'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'retirada de pauta'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'adiamento'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'preferência'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'inversão'
+                     OR toLower(coalesce(v.descricao, '')) CONTAINS 'encerramento da discussão'
+                   ) THEN v END) AS qtdRejeicoesMerito
             WHERE true {filtro_res}
             RETURN p.id AS id,
                    p.siglaTipo AS siglaTipo,

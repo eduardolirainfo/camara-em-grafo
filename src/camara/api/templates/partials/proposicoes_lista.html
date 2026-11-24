@@ -40,10 +40,14 @@
       <div class="bg-paper border border-rule px-3 py-2 text-xs">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center gap-2">
-            {% if v.aprovacao is sameas true %}
-            <span class="px-1.5 py-0.5 bg-civic text-white font-mono text-[10px] uppercase tracking-[0.06em] font-semibold">Aprovado</span>
+            {% if v.ehProcedimental %}
+            <span class="px-1.5 py-0.5 bg-tint border border-rule text-muted font-mono text-[10px] uppercase tracking-[0.06em] font-semibold">
+              {% if v.aprovacao is sameas true %}Req./Destaque Aprovado{% elif v.aprovacao is sameas false %}Req./Destaque Rejeitado{% else %}Procedimental{% endif %}
+            </span>
+            {% elif v.aprovacao is sameas true %}
+            <span class="px-1.5 py-0.5 bg-civic text-white font-mono text-[10px] uppercase tracking-[0.06em] font-semibold">Mérito Aprovado</span>
             {% elif v.aprovacao is sameas false %}
-            <span class="px-1.5 py-0.5 bg-signal text-white font-mono text-[10px] uppercase tracking-[0.06em] font-semibold">Rejeitado</span>
+            <span class="px-1.5 py-0.5 bg-signal text-white font-mono text-[10px] uppercase tracking-[0.06em] font-semibold">Mérito Rejeitado</span>
             {% else %}
             <span class="px-1.5 py-0.5 bg-ink text-paper font-mono text-[10px] uppercase tracking-[0.06em] font-semibold">Votado</span>
             {% endif %}
@@ -61,6 +65,9 @@
         <div class="w-full h-1.5 bg-signal/25 mt-2 overflow-hidden">
           <div class="h-full bg-civic" style="width: {{ v.pctSim }}%"></div>
         </div>
+        {% endif %}
+        {% if v.descricao %}
+        <div class="text-[11px] text-muted mt-1.5 leading-snug">{{ v.descricao }}</div>
         {% endif %}
       </div>
       {% endfor %}
