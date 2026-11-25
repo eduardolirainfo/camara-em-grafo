@@ -45,6 +45,30 @@
   <div class="bg-red-50 border border-signal text-signal p-4 text-xs font-mono">{{ erro }}</div>
   {% endif %}
 
+  <!-- Alerta cruzado entre todos os anos (2023–2026): passageiros fora da equipe do gabinete -->
+  {% if despesas.get('alertas_passageiros_anos') %}
+  <div class="bg-red-50 border-l-4 border-signal border-y border-r border-signal/40 p-3.5 text-xs space-y-2">
+    <div class="flex flex-wrap items-center justify-between gap-2">
+      <div class="font-bold text-signal uppercase font-mono tracking-[0.04em]">
+        Passagens para passageiros fora da equipe oficial do gabinete (cruzamento 2023–2026)
+      </div>
+      <div class="flex flex-wrap gap-1.5">
+        {% for al in despesas.alertas_passageiros_anos %}
+        <button hx-get="/ui/deputado/{{ dep_id }}/tab/despesas?ano={{ al.ano }}"
+                hx-target="#tab-conteudo"
+                hx-indicator="#tab-loading"
+                class="px-2 py-0.5 font-mono text-[11px] border border-signal {% if al.ano == ano %}bg-signal text-white font-semibold{% else %}bg-white text-signal hover:bg-signal hover:text-white{% endif %} transition-colors">
+          Ver {{ al.ano }} ({{ al.quantidade }} · {{ al.valor|brl_curto }})
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+    <p class="text-[11px] text-muted leading-relaxed">
+      Cruzamento automático entre bilhetes aéreos e a lista oficial de pessoal de gabinete de cada ano. Clique no ano acima para inspecionar. <em class="text-ink">Nota:</em> pode incluir assessores de liderança/comissão, abreviações incomuns no bilhete ou emissão para terceiros.
+    </p>
+  </div>
+  {% endif %}
+
   <!-- Gráficos: Gasto Mensal (Barras) + Distribuição por Categoria (Rosca) -->
   {% if despesas.mensal %}
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -301,7 +325,19 @@
       <div class="divide-y divide-rule text-xs">
         {% for ps in despesas.top_passageiros %}
         <div class="flex items-center justify-between py-2 gap-2">
-          <span class="text-ink truncate">{{ ps.passageiro }}</span>
+          <div class="min-w-0 flex flex-wrap items-center gap-1.5">
+            <span class="text-ink truncate">{{ ps.passageiro }}</span>
+            {% if ps.get('vinculo') == 'parlamentar' %}
+            <span class="px-1.5 py-0.5 bg-paper border border-rule text-muted font-mono text-[9px] uppercase">Parlamentar</span>
+            {% elif ps.get('vinculo') == 'equipe' %}
+            <span class="px-1.5 py-0.5 bg-paper border border-civic text-civic font-mono text-[9px] uppercase">Equipe ({{ ano }})</span>
+            {% elif ps.get('vinculo') == 'externo' %}
+            <span class="tip-wrap px-1.5 py-0.5 bg-red-50 border border-signal text-signal font-mono text-[9px] font-semibold uppercase">
+              Fora da equipe ({{ ano }})
+              <span class="tip-box">Não localizado na lista oficial de pessoal de gabinete deste deputado em {{ ano }}. Pode ser assessor de liderança/comissão, abreviação no bilhete ou terceiro.</span>
+            </span>
+            {% endif %}
+          </div>
           <span class="num text-muted shrink-0">
             <strong class="text-ink">{{ ps.voos }}</strong> bilhete(s) · <strong class="text-civic">{{ ps.valor|brl }}</strong>
           </span>

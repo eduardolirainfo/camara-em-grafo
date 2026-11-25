@@ -12,6 +12,7 @@ import re
 import unicodedata
 import zipfile
 from collections import defaultdict
+from difflib import SequenceMatcher
 from pathlib import Path
 from typing import Any
 
@@ -234,6 +235,49 @@ def _normalizar_texto_nome(texto: str) -> str:
         ch for ch in unicodedata.normalize("NFD", texto) if unicodedata.category(ch) != "Mn"
     )
     return re.sub(r"[^A-Z\s]", " ", sem_acento.upper()).strip()
+
+
+def _token_similar(a: str, b: str) -> bool:
+    if a == b:
+        return True
+    if len(a) >= 5 and len(b) >= 5:
+        return SequenceMatcher(None, a, b).ratio() >= 0.84
+    return False
+
+
+def _mesma_pessoa_bilhete(nome_bilhete: str, nome_oficial: str) -> bool:
+    """Compara nome impresso em bilhete aéreo (abreviado, invertido ou com pequeno erro de digitação) com nome oficial."""
+    toks_b = [
+        t for t in _normalizar_texto_nome(nome_bilhete).split() if t not in _CONECTORES_NOME
+    ]
+    toks_o = [
+        t for t in _normalizar_texto_nome(nome_oficial).split() if t not in _CONECTORES_NOME
+    ]
+    if not toks_b or not toks_o:
+        return False
+    longos_b = [t for t in toks_b if len(t) >= 3]
+    longos_o = [t for t in toks_o if len(t) >= 3]
+    matches = sum(
+        1 for tb in longos_b if any(_token_similar(tb, to) for to in longos_o)
+    )
+    if len(longos_b) >= 2 and matches == len(longos_b):
+        return True
+    return matches >= 2
+
+
+def _classificar_passageiro(
+    nome_bilhete: str,
+    nomes_parlamentar: list[str],
+    nomes_equipe: list[str],
+) -> str:
+    """Retorna 'parlamentar', 'equipe' ou 'externo'."""
+    for np in nomes_parlamentar:
+        if np and _mesma_pessoa_bilhete(nome_bilhete, np):
+            return "parlamentar"
+    for ne in nomes_equipe:
+        if ne and _mesma_pessoa_bilhete(nome_bilhete, ne):
+            return "equipe"
+    return "externo"
 
 
 def _extrair_sobrenomes_relevantes(nome: str) -> set[str]:
@@ -470,7 +514,12 @@ class FichaDeputadoService:
             }
 
     async def obter_despesas(
-        self, dep_id: int, ano: int, mes: int | None = None
+        self,
+        dep_id: int,
+        ano: int,
+        mes: int | None = None,
+        nomes_parlamentar: list[str] | None = None,
+        anos_verificacao: list[int] | None = None,
     ) -> dict[str, Any]:
         """Retorna despesas CEAP de um deputado em um ano, com série mensal, categorias e filtro por mês."""
         async with self._criar_cliente() as client:
@@ -580,6 +629,54 @@ class FichaDeputadoService:
             reverse=True,
         )[:10]
 
+        # Cruzamento por ano: passageiro vs. parlamentar + pessoal de gabinete daquele mesmo ano
+        nomes_dep = [n for n in (nomes_parlamentar or []) if n]
+        anos_check = sorted(set(anos_verificacao or [2023, 2024, 2025, 2026]), reverse=True)
+        for y in anos_check:
+            self._carregar_voos_ano(y)
+        anos_com_voos = [y for y in anos_check if self._voos_por_ano.get(y, {}).get(dep_id)]
+
+        equipe_por_ano: dict[int, list[str]] = {}
+        if anos_com_voos:
+            pessoais = await asyncio.gather(
+                *[self.obter_pessoal_gabinete(dep_id, ano=y) for y in anos_com_voos],
+                return_exceptions=True,
+            )
+            for y, p_res in zip(anos_com_voos, pessoais, strict=False):
+                if isinstance(p_res, dict):
+                    equipe_por_ano[y] = [
+                        str(f.get("nome") or "") for f in p_res.get("itens") or []
+                    ]
+
+        equipe_ano_atual = equipe_por_ano.get(ano, [])
+        for ps in top_passageiros:
+            ps["vinculo"] = _classificar_passageiro(
+                ps["passageiro"], nomes_dep, equipe_ano_atual
+            )
+
+        alertas_passageiros_anos: list[dict[str, Any]] = []
+        for y in anos_com_voos:
+            voos_y = self._voos_por_ano.get(y, {}).get(dep_id, [])
+            eq_y = equipe_por_ano.get(y, [])
+            externos_y: set[str] = set()
+            valor_ext = 0.0
+            for v in voos_y:
+                p_nome = v.get("passageiro") or ""
+                if not p_nome:
+                    continue
+                if _classificar_passageiro(p_nome, nomes_dep, eq_y) == "externo":
+                    externos_y.add(p_nome)
+                    valor_ext += float(v.get("valor") or 0.0)
+            if externos_y and valor_ext > 0:
+                alertas_passageiros_anos.append(
+                    {
+                        "ano": y,
+                        "quantidade": len(externos_y),
+                        "valor": round(valor_ext, 2),
+                        "exemplos": sorted(externos_y)[:3],
+                    }
+                )
+
         return {
             "ano": ano,
             "mes": mes,
@@ -591,6 +688,7 @@ class FichaDeputadoService:
             "top_fornecedores": top_fornecedores,
             "top_trechos": top_trechos,
             "top_passageiros": top_passageiros,
+            "alertas_passageiros_anos": alertas_passageiros_anos,
             "total_voos_com_trecho": sum(por_trecho_qtd.values()),
             "itens": itens[:100],
         }

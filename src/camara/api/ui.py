@@ -318,8 +318,24 @@ def criar_ui_router(
             "top_fornecedores": [],
             "itens": [],
         }
+        nomes_dep: list[str] = []
+        dep_g = await obter_repo().buscar_ficha_grafo(dep_id)
+        if dep_g and dep_g.get("nome"):
+            nomes_dep.append(str(dep_g["nome"]))
         try:
-            despesas = await ficha_service.obter_despesas(dep_id, ano, mes=mes_int)
+            det = await ficha_service.obter_detalhes_api(dep_id)
+            if det.get("nomeCivil"):
+                nomes_dep.append(str(det["nomeCivil"]))
+        except _API_ERROS:
+            pass
+        try:
+            despesas = await ficha_service.obter_despesas(
+                dep_id,
+                ano,
+                mes=mes_int,
+                nomes_parlamentar=nomes_dep,
+                anos_verificacao=anos_ordenados,
+            )
         except _API_ERROS:
             erro = "Falha temporária ao consultar despesas CEAP na API da Câmara."
         return templates.TemplateResponse(

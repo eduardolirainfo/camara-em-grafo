@@ -112,7 +112,12 @@ class _FakeFichaService(FichaDeputadoService):
         }
 
     async def obter_despesas(
-        self, dep_id: int, ano: int, mes: int | None = None
+        self,
+        dep_id: int,
+        ano: int,
+        mes: int | None = None,
+        nomes_parlamentar: list[str] | None = None,
+        anos_verificacao: list[int] | None = None,
     ) -> dict[str, Any]:
         return {
             "ano": ano,
@@ -234,3 +239,23 @@ def test_intervalos_exercicio_desconta_afastamentos_secretario() -> None:
         ("2023-11-21", "2023-11-24"),
         ("2026-04-06", "2026-11-23"),
     ]
+
+
+def test_classificar_passageiro_bilhete_abreviado() -> None:
+    from camara.api.ficha_service import _classificar_passageiro
+
+    assert _classificar_passageiro(
+        "RAFAEL F FERRAZ MINATOGAWA",
+        ["Kim Kataguiri", "KIM PATROCA KATAGUIRI"],
+        ["RAFAEL FRANCISCO FERRAZ MINATOGAWA"],
+    ) == "equipe"
+    assert _classificar_passageiro(
+        "CHIGNALIA JUNIOR/ARLINDO",
+        ["Arlindo Chinaglia", "ARLINDO CHINAGLIA JUNIOR"],
+        [],
+    ) == "parlamentar"
+    assert _classificar_passageiro(
+        "TERCEIRO SEM VINCULO",
+        ["Kim Kataguiri"],
+        ["RAFAEL FRANCISCO FERRAZ MINATOGAWA"],
+    ) == "externo"
