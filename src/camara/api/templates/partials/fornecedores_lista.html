@@ -9,8 +9,16 @@
     <div class="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h3 class="font-bold text-ink text-sm tracking-[-0.01em]">{{ f.nome }}</h3>
-        <div class="text-xs font-mono text-muted mt-0.5">
-          CNPJ/CPF: <span class="text-ink">{{ f.cnpj }}</span> · {{ f.totalNotas }} nota(s)
+        <div class="text-xs font-mono text-muted mt-0.5 flex flex-wrap items-center gap-2">
+          <span>CNPJ/CPF: <span class="text-ink">{{ f.cnpj }}</span> · {{ f.totalNotas }} nota(s)</span>
+          {% if f.cnpj|length == 14 %}
+          <button hx-get="/ui/partials/cnpj/{{ f.cnpj }}"
+                  hx-target="#cnpj-info-{{ f.cnpj }}"
+                  hx-swap="innerHTML"
+                  class="text-cobalt underline underline-offset-2 hover:text-signal font-medium">
+            Consultar Receita Federal (Sócios) ↻
+          </button>
+          {% endif %}
         </div>
       </div>
       <div class="flex items-center gap-2 font-mono text-xs">
@@ -22,6 +30,8 @@
         </span>
       </div>
     </div>
+
+    <div id="cnpj-info-{{ f.cnpj }}"></div>
 
     {% if f.topDeputados %}
     <div class="flex flex-wrap items-center gap-1.5 mt-3 pt-3 border-t border-rule text-xs">

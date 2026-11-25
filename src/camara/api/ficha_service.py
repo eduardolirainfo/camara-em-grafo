@@ -573,14 +573,18 @@ class FichaDeputadoService:
         total = 0.0
         por_tipo: dict[str, float] = defaultdict(float)
         por_fornecedor: dict[str, float] = defaultdict(float)
+        cnpj_por_fornecedor: dict[str, str] = {}
 
         for d in itens:
             valor = float(d["valorLiquido"])
             total += valor
             tipo = (d.get("tipoDespesa") or "Outros").strip()
             forn = (d.get("nomeFornecedor") or "Não informado").strip()
+            cnpj_raw = re.sub(r"\D+", "", str(d.get("cnpjCpfFornecedor") or ""))
             por_tipo[tipo] += valor
             por_fornecedor[forn] += valor
+            if len(cnpj_raw) == 14 and forn not in cnpj_por_fornecedor:
+                cnpj_por_fornecedor[forn] = cnpj_raw
 
         categorias = sorted(
             [
@@ -595,7 +599,14 @@ class FichaDeputadoService:
             reverse=True,
         )
         top_fornecedores = sorted(
-            [{"fornecedor": k, "valor": round(v, 2)} for k, v in por_fornecedor.items()],
+            [
+                {
+                    "fornecedor": k,
+                    "cnpj": cnpj_por_fornecedor.get(k, ""),
+                    "valor": round(v, 2),
+                }
+                for k, v in por_fornecedor.items()
+            ],
             key=lambda x: x["valor"],
             reverse=True,
         )[:10]
@@ -918,6 +929,82 @@ class FichaDeputadoService:
             "variacao_pct": variacao_pct,
             "primeiro_mes": ativos[0]["rotulo"] if ativos else "—",
             "ultimo_mes": ativos[-1]["rotulo"] if ativos else "—",
+        }
+
+    async def obter_dados_cnpj(
+        self, cnpj: str, nomes_deputados: list[str] | None = None
+    ) -> dict[str, Any]:
+        """Consulta dados públicos da Receita Federal via BrasilAPI (com cache em disco)
+        e cruza o quadro societário (QSA) com os sobrenomes dos deputados pagadores."""
+        digitos = re.sub(r"\D+", "", cnpj or "")
+        if len(digitos) != 14:
+            return {
+                "erro": "Registro de Pessoa Física (CPF) ou CNPJ incompleto — sem quadro societário na Receita Federal."
+            }
+
+        cache_path = self.cache_dir / "ficha_api" / f"cnpj_{digitos}.json"
+        bruto: dict[str, Any] | None = None
+        if cache_path.exists() and cache_path.stat().st_size > 0:
+            try:
+                bruto = json.loads(cache_path.read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                bruto = None
+
+        if bruto is None:
+            url = f"https://brasilapi.com.br/api/cnpj/v1/{digitos}"
+            async with httpx.AsyncClient(
+                headers={"User-Agent": self.user_agent, "Accept": "application/json"},
+                timeout=20.0,
+                follow_redirects=True,
+            ) as client:
+                resp = await client.get(url)
+                if resp.status_code == 404:
+                    return {"erro": f"CNPJ {digitos} não encontrado na base pública da Receita Federal."}
+                resp.raise_for_status()
+                bruto = dict(resp.json() or {})
+            cache_path.parent.mkdir(parents=True, exist_ok=True)
+            cache_path.write_text(json.dumps(bruto, ensure_ascii=False), encoding="utf-8")
+
+        sobrenomes_deps: set[str] = set()
+        for n in nomes_deputados or []:
+            sobrenomes_deps |= _extrair_sobrenomes_relevantes(n)
+
+        socios: list[dict[str, Any]] = []
+        alerta_sobrenome = False
+        for s in bruto.get("qsa") or []:
+            nome_s = str(s.get("nome_socio") or "").strip()
+            if not nome_s:
+                continue
+            coinc = sorted(sobrenomes_deps & _extrair_sobrenomes_relevantes(nome_s)) if sobrenomes_deps else []
+            if coinc:
+                alerta_sobrenome = True
+            socios.append(
+                {
+                    "nome": nome_s,
+                    "qualificacao": str(s.get("qualificacao_socio") or "").strip(),
+                    "mesmo_sobrenome": bool(coinc),
+                    "sobrenomes_comuns": coinc,
+                }
+            )
+
+        situacao = str(bruto.get("descricao_situacao_cadastral") or "—").strip().upper()
+        abertura = str(bruto.get("data_inicio_atividade") or "")[:10]
+        return {
+            "cnpj": digitos,
+            "razao_social": str(bruto.get("razao_social") or "").strip(),
+            "nome_fantasia": str(bruto.get("nome_fantasia") or "").strip(),
+            "situacao": situacao,
+            "situacao_irregular": situacao not in {"ATIVA", "—", ""},
+            "data_abertura": abertura,
+            "recem_aberta": bool(abertura and abertura >= "2023-01-01"),
+            "capital_social": float(bruto.get("capital_social") or 0.0),
+            "porte": str(bruto.get("porte") or "—").strip(),
+            "cnae": str(bruto.get("cnae_fiscal_descricao") or "—").strip(),
+            "municipio": str(bruto.get("municipio") or "").strip(),
+            "uf": str(bruto.get("uf") or "").strip(),
+            "socios": socios,
+            "alerta_sobrenome": alerta_sobrenome,
+            "erro": None,
         }
 
     async def _carregar_indice_funcionarios(self) -> None:

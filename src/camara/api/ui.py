@@ -258,6 +258,42 @@ def criar_ui_router(
             context={"fornecedores": fornecedores, "busca": busca or ""},
         )
 
+    @router.get("/partials/cnpj/{cnpj}", response_class=HTMLResponse)
+    async def partial_cnpj_receita(
+        request: Request,
+        cnpj: str,
+        dep_id: int | None = None,
+    ) -> HTMLResponse:
+        nomes_deps: list[str] = []
+        if dep_id is not None:
+            dep = await obter_repo().buscar_ficha_grafo(dep_id)
+            if dep and dep.get("nome"):
+                nomes_deps.append(str(dep["nome"]))
+            try:
+                det = await ficha_service.obter_detalhes_api(dep_id)
+                if det.get("nomeCivil"):
+                    nomes_deps.append(str(det["nomeCivil"]))
+            except _API_ERROS:
+                pass
+        else:
+            forns = await obter_repo().buscar_fornecedores_ui(busca=cnpj, limit=1)
+            if forns:
+                for d in forns[0].get("topDeputados") or []:
+                    if d.get("nome"):
+                        nomes_deps.append(str(d["nome"]))
+
+        try:
+            dados = await ficha_service.obter_dados_cnpj(cnpj, nomes_deputados=nomes_deps)
+        except _API_ERROS:
+            dados = {
+                "erro": "Falha temporária ao consultar a Receita Federal (BrasilAPI). Tente novamente em instantes."
+            }
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/cnpj_detalhe.html",
+            context={"dados": dados},
+        )
+
     @router.get("/deputado/{dep_id}", response_class=HTMLResponse)
     async def ficha_deputado(request: Request, dep_id: int) -> HTMLResponse:
         repo = obter_repo()

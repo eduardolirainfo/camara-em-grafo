@@ -274,9 +274,24 @@
       {% else %}
       <div class="divide-y divide-rule text-xs">
         {% for f in despesas.top_fornecedores %}
-        <div class="flex justify-between py-2 gap-2">
-          <span class="text-ink truncate">{{ f.fornecedor }}</span>
-          <span class="num text-civic font-semibold shrink-0">{{ f.valor|brl }}</span>
+        <div class="py-2">
+          <div class="flex justify-between gap-2">
+            <div class="min-w-0">
+              <div class="text-ink truncate">{{ f.fornecedor }}</div>
+              {% if f.get('cnpj') %}
+              <button hx-get="/ui/partials/cnpj/{{ f.cnpj }}?dep_id={{ dep_id }}"
+                      hx-target="#dep-cnpj-{{ f.cnpj }}-{{ loop.index }}"
+                      hx-swap="innerHTML"
+                      class="font-mono text-[10px] text-cobalt underline underline-offset-2 hover:text-signal">
+                CNPJ {{ f.cnpj }} · Ver sócios na Receita ↻
+              </button>
+              {% endif %}
+            </div>
+            <span class="num text-civic font-semibold shrink-0">{{ f.valor|brl }}</span>
+          </div>
+          {% if f.get('cnpj') %}
+          <div id="dep-cnpj-{{ f.cnpj }}-{{ loop.index }}"></div>
+          {% endif %}
         </div>
         {% endfor %}
       </div>
