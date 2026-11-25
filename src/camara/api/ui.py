@@ -428,4 +428,56 @@ def criar_ui_router(
             context={"carreira": carreira, "dep_id": dep_id, "erro": erro},
         )
 
+    @router.get("/funcionario/{codigo}", response_class=HTMLResponse)
+    async def pagina_funcionario(
+        request: Request,
+        codigo: str,
+        nome: str = "Funcionário de Gabinete",
+        cargo: str = "",
+        dep_id: int | None = None,
+        ano: str = "todos",
+    ) -> HTMLResponse:
+        dep_nome = ""
+        if dep_id is not None:
+            dep = await obter_repo().buscar_ficha_grafo(dep_id)
+            if dep:
+                dep_nome = str(dep.get("nome") or "")
+        anos_consulta = (
+            [int(ano)] if ano.isdigit() and int(ano) in anos_ordenados else sorted(anos_ordenados)
+        )
+        historico = await ficha_service.obter_historico_remuneracao(codigo, anos_consulta)
+        return templates.TemplateResponse(
+            request=request,
+            name="funcionario.html",
+            context={
+                "codigo": codigo,
+                "nome": nome,
+                "cargo": cargo,
+                "dep_id": dep_id,
+                "dep_nome": dep_nome,
+                "ano_selecionado": ano,
+                "historico": historico,
+            },
+        )
+
+    @router.get("/funcionario/{codigo}/dados", response_class=HTMLResponse)
+    async def partial_funcionario_salarios(
+        request: Request,
+        codigo: str,
+        ano: str = "todos",
+    ) -> HTMLResponse:
+        anos_consulta = (
+            [int(ano)] if ano.isdigit() and int(ano) in anos_ordenados else sorted(anos_ordenados)
+        )
+        historico = await ficha_service.obter_historico_remuneracao(codigo, anos_consulta)
+        return templates.TemplateResponse(
+            request=request,
+            name="partials/funcionario_salarios.html",
+            context={
+                "codigo": codigo,
+                "ano_selecionado": ano,
+                "historico": historico,
+            },
+        )
+
     return router

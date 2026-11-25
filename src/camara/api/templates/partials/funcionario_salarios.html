@@ -1,0 +1,178 @@
+<div class="space-y-5">
+  <!-- KPIs Salariais -->
+  <div class="grid grid-cols-2 lg:grid-cols-4 border-t border-l border-rule bg-white">
+    <div class="border-r border-b border-rule p-4">
+      <div class="micro">Total Bruto no Período</div>
+      <div class="num text-xl font-semibold text-ink mt-1">{{ historico.total_bruto|brl }}</div>
+      <div class="text-[11px] font-mono text-muted mt-0.5">{{ historico.meses_pagos }} mês(es) com pagamento</div>
+    </div>
+    <div class="border-r border-b border-rule p-4">
+      <div class="micro">Líquido + Auxílios</div>
+      <div class="num text-xl font-semibold text-civic mt-1">{{ historico.total_recebido|brl }}</div>
+      <div class="text-[11px] font-mono text-muted mt-0.5">Auxílios/diárias: {{ historico.total_auxilios|brl }}</div>
+    </div>
+    <div class="border-r border-b border-rule p-4">
+      <div class="micro">Média Mensal Bruta</div>
+      <div class="num text-xl font-semibold text-ink mt-1">{{ historico.media_bruto|brl }}</div>
+      <div class="text-[11px] font-mono text-muted mt-0.5">{{ historico.primeiro_mes }} → {{ historico.ultimo_mes }}</div>
+    </div>
+    <div class="border-r border-b border-rule p-4">
+      <div class="micro">Variação do Cargo (1º → Últ.)</div>
+      <div class="num text-xl font-semibold mt-1 {% if historico.variacao_abs > 0 %}text-signal{% elif historico.variacao_abs < 0 %}text-civic{% else %}text-ink{% endif %}">
+        {% if historico.variacao_abs > 0 %}+{% endif %}{{ historico.variacao_abs|brl }}
+      </div>
+      <div class="text-[11px] font-mono text-muted mt-0.5">
+        {% if historico.variacao_pct > 0 %}+{% endif %}{{ historico.variacao_pct }}% no salário base do cargo
+      </div>
+    </div>
+  </div>
+
+  {% if historico.meses_pagos == 0 %}
+  <div class="bg-white border border-rule p-8 text-center text-sm text-muted">
+    Nenhum pagamento registrado para este funcionário no período selecionado.
+  </div>
+  {% else %}
+  <!-- Gráfico de Evolução Salarial Mês a Mês -->
+  <div class="bg-white border border-rule p-4 sm:p-5 min-w-0 overflow-hidden">
+    <div class="flex flex-wrap items-center justify-between gap-2 pb-3 mb-4 border-b-2 border-ink">
+      <div>
+        <h2 class="text-sm font-bold text-ink">Evolução Salarial Mês a Mês (R$)</h2>
+        <p class="text-xs text-muted mt-0.5">Salário do cargo/função, eventuais (férias/13º) e auxílios/diárias conforme portal oficial.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-3 text-[11px] font-mono">
+        <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-ink inline-block"></span> Salário Cargo</span>
+        <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-civic inline-block"></span> Auxílios/Diárias</span>
+        <span class="inline-flex items-center gap-1.5"><span class="w-2.5 h-2.5 bg-ochre inline-block"></span> 13º / Férias</span>
+      </div>
+    </div>
+    <div class="relative w-full h-72">
+      <canvas id="grafico-sal-{{ codigo }}-{{ ano_selecionado }}"></canvas>
+    </div>
+  </div>
+
+  <script>
+  (function() {
+    if (typeof Chart === 'undefined') return;
+    const serie = {{ historico.serie | tojson }};
+    const filtrados = serie.filter(m => m.bruto > 0 || m.liquido > 0 || m.auxilios > 0);
+    const canvasId = 'grafico-sal-{{ codigo }}-{{ ano_selecionado }}';
+    const fmtBRL = (v) => 'R$ ' + Number(v || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    function desenhar() {
+      const el = document.getElementById(canvasId);
+      if (!el) return;
+      const prev = Chart.getChart(el);
+      if (prev) prev.destroy();
+
+      const cs = getComputedStyle(document.documentElement);
+      const colBar = cs.getPropertyValue('--chart-bar').trim() || '#141413';
+      const colCivic = cs.getPropertyValue('--accent-civic').trim() || '#155E34';
+      const colOchre = cs.getPropertyValue('--accent-ochre').trim() || '#9A5B06';
+      const colMuted = cs.getPropertyValue('--text-muted').trim() || '#666259';
+      const colInk = cs.getPropertyValue('--text-ink').trim() || '#141413';
+      const colCard = cs.getPropertyValue('--bg-card').trim() || '#FFFFFF';
+      const colGrid = cs.getPropertyValue('--chart-grid').trim() || '#E6E2D9';
+
+      new Chart(el, {
+        type: 'bar',
+        data: {
+          labels: filtrados.map(m => m.rotulo),
+          datasets: [
+            {
+              label: 'Salário do Cargo',
+              data: filtrados.map(m => m.cargo_comissao),
+              backgroundColor: colBar,
+              borderRadius: 0
+            },
+            {
+              label: 'Auxílios e Diárias',
+              data: filtrados.map(m => m.auxilios),
+              backgroundColor: colCivic,
+              borderRadius: 0
+            },
+            {
+              label: '13º / Férias / Eventuais',
+              data: filtrados.map(m => m.eventuais),
+              backgroundColor: colOchre,
+              borderRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: { duration: 220 },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: colInk,
+              titleColor: colCard,
+              bodyColor: colCard,
+              cornerRadius: 0,
+              callbacks: {
+                label: (ctx) => ctx.dataset.label + ': ' + fmtBRL(ctx.raw)
+              }
+            }
+          },
+          scales: {
+            x: {
+              stacked: true,
+              ticks: { color: colMuted, font: { family: 'IBM Plex Mono', size: 10 } },
+              grid: { display: false }
+            },
+            y: {
+              stacked: true,
+              beginAtZero: true,
+              ticks: {
+                color: colMuted,
+                font: { family: 'IBM Plex Mono', size: 10 },
+                callback: (v) => v >= 1000 ? 'R$ ' + (v / 1000).toFixed(0) + 'k' : 'R$ ' + v
+              },
+              grid: { color: colGrid }
+            }
+          }
+        }
+      });
+    }
+
+    requestAnimationFrame(desenhar);
+    window.addEventListener('cg-theme-changed', () => {
+      if (document.getElementById(canvasId)) desenhar();
+    });
+  })();
+  </script>
+
+  <!-- Tabela Detalhada Mês a Mês -->
+  <div class="bg-white border border-rule p-4 overflow-x-auto">
+    <h3 class="text-sm font-bold text-ink pb-2.5 mb-3 border-b-2 border-ink">Detalhamento Mensal dos Contracheques</h3>
+    <table class="w-full text-left text-xs">
+      <thead class="micro border-b border-ink bg-paper">
+        <tr>
+          <th class="py-2.5 px-2">Mês/Ano</th>
+          <th class="py-2.5 px-2 text-right">Salário Cargo</th>
+          <th class="py-2.5 px-2 text-right">13º / Férias</th>
+          <th class="py-2.5 px-2 text-right">Descontos</th>
+          <th class="py-2.5 px-2 text-right">Líquido</th>
+          <th class="py-2.5 px-2 text-right">Auxílios / Diárias</th>
+          <th class="py-2.5 px-2 text-right">Total Recebido</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y divide-rule text-ink">
+        {% for m in historico.serie|reverse %}
+        {% if m.bruto > 0 or m.liquido > 0 or m.auxilios > 0 %}
+        <tr class="hover:bg-paper/70">
+          <td class="py-2 px-2 font-mono font-semibold">{{ m.rotulo }}</td>
+          <td class="py-2 px-2 text-right num">{{ m.cargo_comissao|brl }}</td>
+          <td class="py-2 px-2 text-right num text-muted">{{ m.eventuais|brl }}</td>
+          <td class="py-2 px-2 text-right num text-signal">{{ m.descontos|brl }}</td>
+          <td class="py-2 px-2 text-right num">{{ m.liquido|brl }}</td>
+          <td class="py-2 px-2 text-right num text-civic">{{ m.auxilios|brl }}</td>
+          <td class="py-2 px-2 text-right num font-bold">{{ m.total_recebido|brl }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>

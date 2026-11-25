@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import csv
 import html as html_lib
 import io
@@ -268,6 +269,7 @@ def _parsear_pessoal_gabinete_html(html_text: str) -> list[dict[str, Any]]:
         url_rem = href_match.group(1) if href_match else ""
         if url_rem.startswith("/"):
             url_rem = f"https://www.camara.leg.br{url_rem}"
+        codigo_rem = url_rem.rstrip("/").split("/")[-1] if "remuneracao/" in url_rem else ""
         ativo = periodo.lower().startswith("desde ") and " a " not in periodo.lower()
         resultado.append(
             {
@@ -277,9 +279,73 @@ def _parsear_pessoal_gabinete_html(html_text: str) -> list[dict[str, Any]]:
                 "periodo": periodo,
                 "ativo": ativo,
                 "url_remuneracao": url_rem,
+                "codigo_remuneracao": codigo_rem,
             }
         )
     return resultado
+
+
+def _brl_para_float(texto: str) -> float:
+    limpo = re.sub(r"[^0-9,\-]", "", texto or "").strip()
+    if not limpo:
+        return 0.0
+    try:
+        return float(limpo.replace(".", "").replace(",", "."))
+    except ValueError:
+        return 0.0
+
+
+def _parsear_remuneracao_html(html_text: str) -> dict[str, float]:
+    """Extrai valores mensais de remuneração da página oficial da Câmara."""
+    tabelas = re.findall(r"<table[^>]*>(.*?)</table>", html_text, flags=re.DOTALL | re.IGNORECASE)
+    if not tabelas:
+        return {
+            "bruto": 0.0,
+            "cargo_comissao": 0.0,
+            "eventuais": 0.0,
+            "descontos": 0.0,
+            "liquido": 0.0,
+            "auxilios": 0.0,
+            "total_recebido": 0.0,
+        }
+    fixa = 0.0
+    cargo = 0.0
+    eventuais = 0.0
+    descontos = 0.0
+    liquido = 0.0
+    auxilios = 0.0
+    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", tabelas[0], flags=re.DOTALL | re.IGNORECASE):
+        tds = [
+            re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]+>", " ", td))).strip()
+            for td in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, flags=re.DOTALL | re.IGNORECASE)
+        ]
+        if len(tds) < 2:
+            continue
+        rotulo = tds[0].lower()
+        val = _brl_para_float(tds[1])
+        if "remuneração fixa" in rotulo or "vantagens de natureza pessoal" in rotulo or "abono perman" in rotulo:
+            fixa += val
+        elif "função ou cargo em comissão" in rotulo:
+            cargo += val
+        elif "gratificação natalina" in rotulo or "férias" in rotulo or "outras remunerações" in rotulo:
+            eventuais += val
+        elif "redutor constitucional" in rotulo or "contribuição previdenciária" in rotulo or "imposto de renda" in rotulo:
+            descontos += val
+        elif "remuneração após descontos" in rotulo:
+            liquido = val
+        elif "diárias" in rotulo or "auxílios" in rotulo or "vantagens indenizatórias" in rotulo:
+            auxilios += val
+
+    bruto = round(fixa + cargo + eventuais, 2)
+    return {
+        "bruto": bruto,
+        "cargo_comissao": round(cargo + fixa, 2),
+        "eventuais": round(eventuais, 2),
+        "descontos": round(descontos, 2),
+        "liquido": round(liquido, 2),
+        "auxilios": round(auxilios, 2),
+        "total_recebido": round(liquido + auxilios, 2),
+    }
 
 
 def _valor_liquido_despesa(item: dict[str, Any]) -> float:
@@ -645,7 +711,18 @@ class FichaDeputadoService:
                 exonerados += 1
             if tem_coinc:
                 mesmo_sobrenome_qtd += 1
-            enriquecidos.append({**r, "mesmo_sobrenome": tem_coinc, "sobrenomes_comuns": coinc})
+            url_r = str(r.get("url_remuneracao") or "")
+            cod_r = r.get("codigo_remuneracao") or (
+                url_r.rstrip("/").split("/")[-1] if "remuneracao/" in url_r else ""
+            )
+            enriquecidos.append(
+                {
+                    **r,
+                    "codigo_remuneracao": cod_r,
+                    "mesmo_sobrenome": tem_coinc,
+                    "sobrenomes_comuns": coinc,
+                }
+            )
 
         enriquecidos.sort(key=lambda x: (not x.get("ativo", True), not x["mesmo_sobrenome"], x["nome"]))
         return {
@@ -655,6 +732,94 @@ class FichaDeputadoService:
             "total": len(enriquecidos),
             "mesmo_sobrenome_qtd": mesmo_sobrenome_qtd,
             "itens": enriquecidos,
+        }
+
+    async def obter_remuneracao_ano(self, codigo: str, ano: int) -> list[dict[str, Any]]:
+        """Busca e faz cache da remuneração mensal (1..12) de um funcionário na Câmara."""
+        cod_limpo = re.sub(r"[^A-Za-z0-9_-]", "", codigo)
+        if not cod_limpo:
+            return []
+        cache_path = self.cache_dir / "ficha_api" / f"remuneracao_{cod_limpo}_{ano}.json"
+        if cache_path.exists() and cache_path.stat().st_size > 0:
+            try:
+                return list(json.loads(cache_path.read_text(encoding="utf-8")))
+            except (OSError, ValueError):
+                pass
+
+        sem = asyncio.Semaphore(4)
+        siglas = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"]
+
+        async def _buscar_mes(client: httpx.AsyncClient, mes: int) -> dict[str, Any]:
+            url = f"https://www.camara.leg.br/transparencia/recursos-humanos/remuneracao/{cod_limpo}"
+            async with sem:
+                try:
+                    resp = await client.get(url, params={"ano": ano, "mes": mes})
+                    resp.raise_for_status()
+                    parsed = _parsear_remuneracao_html(resp.text)
+                except httpx.HTTPError:
+                    parsed = {
+                        "bruto": 0.0,
+                        "cargo_comissao": 0.0,
+                        "eventuais": 0.0,
+                        "descontos": 0.0,
+                        "liquido": 0.0,
+                        "auxilios": 0.0,
+                        "total_recebido": 0.0,
+                    }
+            return {
+                "ano": ano,
+                "mes": mes,
+                "rotulo": f"{siglas[mes - 1]}/{str(ano)[2:]}",
+                **parsed,
+            }
+
+        async with httpx.AsyncClient(
+            headers={"User-Agent": self.user_agent},
+            timeout=20.0,
+            follow_redirects=True,
+        ) as client:
+            meses = await asyncio.gather(*[_buscar_mes(client, m) for m in range(1, 13)])
+
+        meses_ord = sorted(meses, key=lambda x: x["mes"])
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        cache_path.write_text(json.dumps(meses_ord, ensure_ascii=False), encoding="utf-8")
+        return meses_ord
+
+    async def obter_historico_remuneracao(
+        self, codigo: str, anos: list[int]
+    ) -> dict[str, Any]:
+        """Consolida remunerações de 1 ou mais anos para gráfico e tabela de evolução salarial."""
+        serie: list[dict[str, Any]] = []
+        for ano in sorted(anos):
+            serie.extend(await self.obter_remuneracao_ano(codigo, ano))
+
+        ativos = [m for m in serie if m["bruto"] > 0 or m["liquido"] > 0 or m["auxilios"] > 0]
+        total_bruto = round(sum(m["bruto"] for m in ativos), 2)
+        total_liquido = round(sum(m["liquido"] for m in ativos), 2)
+        total_auxilios = round(sum(m["auxilios"] for m in ativos), 2)
+        total_recebido = round(sum(m["total_recebido"] for m in ativos), 2)
+        media_bruto = round(total_bruto / len(ativos), 2) if ativos else 0.0
+
+        variacao_abs = 0.0
+        variacao_pct = 0.0
+        if len(ativos) >= 2 and ativos[0]["cargo_comissao"] > 0:
+            primeiro = ativos[0]["cargo_comissao"]
+            ultimo = ativos[-1]["cargo_comissao"]
+            variacao_abs = round(ultimo - primeiro, 2)
+            variacao_pct = round((variacao_abs / primeiro) * 100, 1)
+
+        return {
+            "serie": serie,
+            "meses_pagos": len(ativos),
+            "total_bruto": total_bruto,
+            "total_liquido": total_liquido,
+            "total_auxilios": total_auxilios,
+            "total_recebido": total_recebido,
+            "media_bruto": media_bruto,
+            "variacao_abs": variacao_abs,
+            "variacao_pct": variacao_pct,
+            "primeiro_mes": ativos[0]["rotulo"] if ativos else "—",
+            "ultimo_mes": ativos[-1]["rotulo"] if ativos else "—",
         }
 
     async def _carregar_indice_funcionarios(self) -> None:

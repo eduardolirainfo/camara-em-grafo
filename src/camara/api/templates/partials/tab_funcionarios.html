@@ -73,7 +73,14 @@
         {% for f in funcionarios %}
         <tr class="hover:bg-paper/70">
           <td class="py-2 px-2">
+            {% if f.get('codigo_remuneracao') %}
+            <a href="/ui/funcionario/{{ f.codigo_remuneracao }}?nome={{ f.nome|urlencode }}&cargo={{ (f.cargo or '')|urlencode }}&dep_id={{ dep_id }}"
+               class="font-semibold text-ink hover:text-signal underline underline-offset-2 transition-colors">
+              {{ f.nome }}
+            </a>
+            {% else %}
             <span class="font-semibold">{{ f.nome }}</span>
+            {% endif %}
             {% if f.mesmo_sobrenome %}
             <span class="ml-1.5 px-1.5 py-0.5 bg-red-50 border border-signal text-signal font-mono text-[10px] uppercase">
               Mesmo sobrenome ({{ f.sobrenomes_comuns|join(', ') }})
@@ -90,10 +97,16 @@
           </td>
           <td class="py-2 px-2"><span class="px-2 py-0.5 bg-paper border border-rule font-mono text-[11px]">{{ f.cargo or '—' }}</span></td>
           <td class="py-2 px-2 num text-muted whitespace-nowrap">{{ f.periodo or '—' }}</td>
-          <td class="py-2 px-2 text-right whitespace-nowrap font-mono">
+          <td class="py-2 px-2 text-right whitespace-nowrap font-mono space-x-2">
+            {% if f.get('codigo_remuneracao') %}
+            <a href="/ui/funcionario/{{ f.codigo_remuneracao }}?nome={{ f.nome|urlencode }}&cargo={{ (f.cargo or '')|urlencode }}&dep_id={{ dep_id }}"
+               class="px-2 py-1 bg-ink text-paper hover:bg-signal text-[10px] uppercase tracking-[0.05em] transition-colors">
+              Gráfico salarial
+            </a>
+            {% endif %}
             {% if f.url_remuneracao %}
-            <a href="{{ f.url_remuneracao }}" target="_blank" class="text-cobalt underline underline-offset-2 hover:text-signal font-medium">
-              Ver salário ↗
+            <a href="{{ f.url_remuneracao }}" target="_blank" class="text-cobalt underline underline-offset-2 hover:text-signal text-[11px]">
+              Portal ↗
             </a>
             {% else %}—{% endif %}
           </td>
