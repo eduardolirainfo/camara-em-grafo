@@ -14,6 +14,7 @@ from fastapi.templating import Jinja2Templates
 from camara.api.ficha_service import (
     UF_INFO,
     FichaDeputadoService,
+    formatar_trecho_legivel,
     url_bandeira_uf,
     url_logo_partido,
 )
@@ -75,6 +76,7 @@ def criar_ui_router(
     templates.env.filters["brl_curto"] = _fmt_brl_curto
     templates.env.filters["pct"] = _fmt_pct
     templates.env.filters["data_br"] = _fmt_data_br
+    templates.env.filters["trecho_legivel"] = formatar_trecho_legivel
 
     async def _mapa_grupos(repo: Neo4jGraphRepository) -> dict[int, dict[str, Any]]:
         resumo = await repo.resumo_geral_ui()

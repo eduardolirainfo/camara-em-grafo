@@ -60,6 +60,156 @@ def url_logo_partido(sigla: str | None) -> str | None:
     return f"https://www.camara.leg.br/internet/Deputado/img/partidos/{limpa}.gif"
 
 
+# Principais aeroportos brasileiros (IATA -> Cidade/UF) e internacionais comuns na CEAP
+AEROPORTOS_IATA: dict[str, str] = {
+    # Capitais e grandes centros do Brasil
+    "BSB": "Brasília (DF)",
+    "CGH": "São Paulo · Congonhas (SP)",
+    "GRU": "Guarulhos (SP)",
+    "VCP": "Campinas · Viracopos (SP)",
+    "SDU": "Rio de Janeiro · Santos Dumont (RJ)",
+    "GIG": "Rio de Janeiro · Galeão (RJ)",
+    "CNF": "Belo Horizonte · Confins (MG)",
+    "PLU": "Belo Horizonte · Pampulha (MG)",
+    "SSA": "Salvador (BA)",
+    "REC": "Recife (PE)",
+    "FOR": "Fortaleza (CE)",
+    "POA": "Porto Alegre (RS)",
+    "CWB": "Curitiba (PR)",
+    "FLN": "Florianópolis (SC)",
+    "GYN": "Goiânia (GO)",
+    "VIX": "Vitória (ES)",
+    "BEL": "Belém (PA)",
+    "MAO": "Manaus (AM)",
+    "MCP": "Macapá (AP)",
+    "NAT": "Natal (RN)",
+    "MCZ": "Maceió (AL)",
+    "AJU": "Aracaju (SE)",
+    "JPA": "João Pessoa (PB)",
+    "SLZ": "São Luís (MA)",
+    "THE": "Teresina (PI)",
+    "CGB": "Cuiabá (MT)",
+    "CGR": "Campo Grande (MS)",
+    "PVH": "Porto Velho (RO)",
+    "RBR": "Rio Branco (AC)",
+    "BVB": "Boa Vista (RR)",
+    "PMW": "Palmas (TO)",
+    # Interior do Brasil (frequentes na CEAP)
+    "RAO": "Ribeirão Preto (SP)",
+    "SJP": "São José do Rio Preto (SP)",
+    "PPB": "Presidente Prudente (SP)",
+    "JTC": "Bauru (SP)",
+    "ARU": "Araçatuba (SP)",
+    "MII": "Marília (SP)",
+    "SJK": "São José dos Campos (SP)",
+    "UDI": "Uberlândia (MG)",
+    "UBA": "Uberaba (MG)",
+    "MOC": "Montes Claros (MG)",
+    "IZA": "Juiz de Fora (MG)",
+    "JDF": "Juiz de Fora (MG)",
+    "IPN": "Ipatinga (MG)",
+    "GVR": "Governador Valadares (MG)",
+    "VAG": "Varginha (MG)",
+    "LDB": "Londrina (PR)",
+    "MGF": "Maringá (PR)",
+    "IGU": "Foz do Iguaçu (PR)",
+    "CAC": "Cascavel (PR)",
+    "PGZ": "Ponta Grossa (PR)",
+    "NVT": "Navegantes (SC)",
+    "JOI": "Joinville (SC)",
+    "XAP": "Chapecó (SC)",
+    "JJG": "Jaguaruna (SC)",
+    "CXJ": "Caxias do Sul (RS)",
+    "PFB": "Passo Fundo (RS)",
+    "PET": "Pelotas (RS)",
+    "RIA": "Santa Maria (RS)",
+    "GEL": "Santo Ângelo (RS)",
+    "URG": "Uruguaiana (RS)",
+    "BPS": "Porto Seguro (BA)",
+    "IOS": "Ilhéus (BA)",
+    "VDC": "Vitória da Conquista (BA)",
+    "BRA": "Barreiras (BA)",
+    "FEC": "Feira de Santana (BA)",
+    "LEC": "Lençóis (BA)",
+    "PNZ": "Petrolina (PE)",
+    "FEN": "Fernando de Noronha (PE)",
+    "JDO": "Juazeiro do Norte (CE)",
+    "JJD": "Jericoacoara (CE)",
+    "CPV": "Campina Grande (PB)",
+    "IMP": "Imperatriz (MA)",
+    "PHB": "Parnaíba (PI)",
+    "STM": "Santarém (PA)",
+    "MAB": "Marabá (PA)",
+    "CKS": "Carajás (PA)",
+    "ATM": "Altamira (PA)",
+    "ITB": "Itaituba (PA)",
+    "OPS": "Sinop (MT)",
+    "ROO": "Rondonópolis (MT)",
+    "SMT": "Sorriso (MT)",
+    "AFL": "Alta Floresta (MT)",
+    "DOU": "Dourados (MS)",
+    "BYO": "Bonito (MS)",
+    "CMG": "Corumbá (MS)",
+    "TJL": "Três Lagoas (MS)",
+    "JPR": "Ji-Paraná (RO)",
+    "OAL": "Cacoal (RO)",
+    "BVH": "Vilhena (RO)",
+    "CZS": "Cruzeiro do Sul (AC)",
+    "AUX": "Araguaína (TO)",
+    "CAW": "Campos dos Goytacazes (RJ)",
+    "CFB": "Cabo Frio (RJ)",
+    "MEA": "Macaé (RJ)",
+    "CLV": "Caldas Novas (GO)",
+    "RVD": "Rio Verde (GO)",
+    "TFF": "Tefé (AM)",
+    "TBT": "Tabatinga (AM)",
+    "PIN": "Parintins (AM)",
+    # Destinos internacionais comuns
+    "MVD": "Montevidéu (Uruguai)",
+    "ASU": "Assunção (Paraguai)",
+    "EZE": "Buenos Aires · Ezeiza (Argentina)",
+    "AEP": "Buenos Aires · Aeroparque (Argentina)",
+    "SCL": "Santiago (Chile)",
+    "LIM": "Lima (Peru)",
+    "BOG": "Bogotá (Colômbia)",
+    "PTY": "Cidade do Panamá (Panamá)",
+    "MEX": "Cidade do México (México)",
+    "CUN": "Cancún (México)",
+    "MIA": "Miami (EUA)",
+    "MCO": "Orlando (EUA)",
+    "JFK": "Nova York (EUA)",
+    "EWR": "Newark · Nova York (EUA)",
+    "IAD": "Washington (EUA)",
+    "ATL": "Atlanta (EUA)",
+    "IAH": "Houston (EUA)",
+    "DFW": "Dallas (EUA)",
+    "LIS": "Lisboa (Portugal)",
+    "OPO": "Porto (Portugal)",
+    "MAD": "Madri (Espanha)",
+    "BCN": "Barcelona (Espanha)",
+    "CDG": "Paris (França)",
+    "LHR": "Londres (Reino Unido)",
+    "FCO": "Roma (Itália)",
+    "FRA": "Frankfurt (Alemanha)",
+    "AMS": "Amsterdã (Holanda)",
+    "ZRH": "Zurique (Suíça)",
+    "GVA": "Genebra (Suíça)",
+    "DXB": "Dubai (Emirados Árabes)",
+    "DOH": "Doha (Catar)",
+}
+
+
+def formatar_trecho_legivel(trecho: str | None) -> str:
+    """Traduz códigos IATA (ex.: 'MCP/BSB') para 'Macapá (AP) → Brasília (DF)'."""
+    if not trecho:
+        return ""
+    partes = [p.strip().upper() for p in re.split(r"[/\-]+", str(trecho)) if p.strip()]
+    if not partes:
+        return str(trecho)
+    traduzidas = [AEROPORTOS_IATA.get(cod, cod) for cod in partes]
+    return " → ".join(traduzidas)
+
+
 def url_bandeira_uf(sigla: str | None) -> str | None:
     if not sigla:
         return None
@@ -183,7 +333,10 @@ class FichaDeputadoService:
                     for row in csv.DictReader(
                         io.TextIOWrapper(fh, encoding="utf-8-sig"), delimiter=";"
                     ):
-                        trecho = (row.get("txtTrecho") or "").strip().upper()
+                        trecho_raw = (row.get("txtTrecho") or "").strip().upper()
+                        trecho = "/".join(
+                            p.strip() for p in trecho_raw.split("/") if p.strip()
+                        )
                         passageiro = (row.get("txtPassageiro") or "").strip()
                         if not trecho and not passageiro:
                             continue

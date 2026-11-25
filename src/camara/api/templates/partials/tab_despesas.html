@@ -274,9 +274,12 @@
       {% else %}
       <div class="divide-y divide-rule text-xs">
         {% for t in despesas.top_trechos %}
-        <div class="flex items-center justify-between py-2 gap-2">
-          <span class="font-mono font-semibold text-ink">{{ t.trecho }}</span>
-          <span class="num text-muted shrink-0">
+        <div class="flex items-start justify-between py-2 gap-2">
+          <div class="min-w-0">
+            <div class="font-semibold text-ink leading-snug">{{ t.trecho|trecho_legivel }}</div>
+            <div class="font-mono text-[10px] text-muted">{{ t.trecho }}</div>
+          </div>
+          <span class="num text-muted shrink-0 whitespace-nowrap">
             <strong class="text-ink">{{ t.voos }}</strong> voo(s) · <strong class="text-civic">{{ t.valor|brl }}</strong>
           </span>
         </div>
@@ -329,9 +332,9 @@
           <td class="py-2 px-2">
             <div>{{ item.tipoDespesa }}</div>
             {% if item.get('trecho') or item.get('passageiro') %}
-            <div class="font-mono text-[10px] text-ochre mt-0.5">
-              {% if item.get('trecho') %}Trecho: <strong>{{ item.trecho }}</strong>{% endif %}
-              {% if item.get('passageiro') %}{% if item.get('trecho') %} · {% endif %}Passageiro: {{ item.passageiro }}{% endif %}
+            <div class="text-[11px] text-ochre mt-0.5 leading-snug">
+              {% if item.get('trecho') %}<strong>{{ item.trecho|trecho_legivel }}</strong> <span class="font-mono text-[10px] text-muted">({{ item.trecho }})</span>{% endif %}
+              {% if item.get('passageiro') %}{% if item.get('trecho') %} · {% endif %}<span class="font-mono text-[10px]">Passageiro: {{ item.passageiro }}</span>{% endif %}
             </div>
             {% endif %}
           </td>
