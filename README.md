@@ -1,10 +1,10 @@
 # Câmara em Grafo
 
-Dados abertos da Câmara dos Deputados modelados em grafo no **Neo4j**, com coleta assíncrona em **Python** e (nos próximos marcos) API **GraphQL** com FastAPI e Strawberry.
+Dados abertos da Câmara dos Deputados (57ª Legislatura, 2023–2027) modelados em grafo no **Neo4j + Graph Data Science (GDS)**, com coleta assíncrona em **Python**, API **GraphQL** (FastAPI + Strawberry), rotas **REST** de benchmark e interface editorial responsiva em **HTMX + Chart.js** (tema Claro e Escuro).
 
-O objetivo é responder perguntas sobre a atuação parlamentar além da sigla do partido — filiações, coautoria, padrões de votação e frentes parlamentares — sempre com dados públicos oficiais e link para o registro de origem na Câmara.
+O objetivo é tornar auditável a atuação parlamentar além da sigla do partido — gastos da Cota Parlamentar (CEAP), rede de fornecedores (CNPJs), presença real em plenário, votos contra o próprio partido, trechos aéreos, evolução salarial de funcionários de gabinete, projetos e discursos — sempre com dados públicos oficiais, fórmulas transparentes e link direto para o registro de origem na Câmara.
 
-- **Fonte de dados:** [Dados Abertos da Câmara dos Deputados (API v2)](https://dadosabertos.camara.leg.br/swagger/api.html) e [Arquivos em Lote](https://dadosabertos.camara.leg.br/arquivos/)
+- **Fontes oficiais:** [API v2 de Dados Abertos da Câmara](https://dadosabertos.camara.leg.br/swagger/api.html), [Arquivos em Lote (CSV/ZIP)](https://dadosabertos.camara.leg.br/arquivos/) e [Portal de Transparência / Pessoal de Gabinete](https://www.camara.leg.br/transparencia/)
 
 ---
 
@@ -114,6 +114,14 @@ Com a API rodando em `http://localhost:8001` (recomendado elevar `API_RATE_LIMIT
 .\.venv\Scripts\camara.exe medir-m6 --url http://localhost:8001 --repeticoes 30 --concorrencia 5 --salvar-json medicoes/m6_benchmark.json --salvar-csv medicoes/m6_benchmark.csv
 ```
 
+### Carga de Cota Parlamentar (CEAP), Rede de Fornecedores e Indicadores (`carregar-gastos`)
+
+Baixa os arquivos anuais em lote `Ano-{ano}.csv.zip` da Câmara (`2023`–`2026`), cria os nós `Fornecedor` (CNPJs) e relações `(Deputado)-[:PAGOU]->(Fornecedor)`, marca quem está em exercício hoje (`d.emExercicio`), reconstrói os intervalos exatos de exercício via `/historico` (`d.votacoesAtivo`, `d.diasEmExercicio`, `d.teveLicencaCargo`) e calcula os indicadores objetivos (`d.hhiFornecedores`, `d.gastoVsMedianaUf`, `d.projetosVotados`, `d.projetosAprovados`):
+
+```powershell
+.\.venv\Scripts\camara.exe carregar-gastos
+```
+
 Outras opções úteis:
 - `coletar-m1` / `coletar-m2` — baixa apenas para `cache/` sem gravar no Neo4j (`--forcar` ignora o cache existente).
 - `--anos 2023 2024 2025 2026` e `--tipos PL,PLP,PEC,PDL,PRC` (ou `--tipos TODOS`) no M2.
@@ -143,15 +151,41 @@ Com o Neo4j rodando e populado, suba a API localmente via Uvicorn (ou junto com 
 
 ### Recursos da Interface Visual (M7)
 
-- **Filtros dinâmicos com HTMX** por nome, UF (com bandeira), partido (com logo oficial), bloco de votação (GDS Louvain) e ordenação (nome, PageRank, Betweenness, divergência partidária).
-- **Ficha completa do deputado (`/ui/deputado/{id}`)** com 6 abas carregadas sob demanda:
-  1. **Grafo & Alianças:** coautores, quem vota mais parecido, pauta temática similar (GDS) e votos contra a orientação do partido.
-  2. **Dinheiro (CEAP):** despesas anuais (2023–2026) por categoria, top fornecedores e links para os PDFs das notas fiscais.
-  3. **Funcionários & Salário:** lista de Secretários Parlamentares e CNEs lotados no gabinete (`funcionarios.csv`) + links oficiais para verba de gabinete e tabela de remuneração da Câmara.
-  4. **Proposições:** projetos do deputado no recorte M2 com temas e link oficial.
-  5. **Comissões, Frentes & Discursos:** órgãos, frentes parlamentares e discursos recentes.
-  6. **Carreira & Histórico:** profissões, ocupações, mandatos externos e histórico de filiações.
-- **Busca fulltext de proposições** e **Menor caminho por coautoria** diretamente na página inicial.
+Interface editorial própria em **tipografia suíça** (`Inter` + `IBM Plex Mono` com números tabulares), **tema Claro e Escuro**, responsiva para desktop/celular e com barra global de carregamento:
+
+- **Explorador de Deputados (`/ui`):**
+  - Filtros combináveis por nome, situação (*Apenas em exercício* por padrão, *Todos*, *Fora de exercício*), UF (com bandeira), partido (com logo oficial), grupo de votação (descoberto automaticamente via GDS Louvain/Leiden) e 16 ordenações (gasto CEAP, viagens, divulgação, aeronaves, consultorias, concentração HHI, gasto acima da mediana da UF, custo por voto, presença, votos contra o partido, equipe, trocas de partido e projetos aprovados).
+  - Persistência completa dos filtros, ordenação, aba ativa e paginação na URL (`/ui?...`) e no botão *Voltar*.
+  - **Selos objetivos em SVG** (sem estrelas subjetivas) e **Modal de Metodologia** acessível no cabeçalho.
+- **Ficha completa do deputado (`/ui/deputado/{id}`)** com 6 abas carregadas sob demanda via HTMX:
+  1. **Alianças & Votos:** principais coautores, quem vota mais parecido, mesmos assuntos legislativos e taxa de votos contra a orientação do próprio partido.
+  2. **Dinheiro (Cota Parlamentar):** gráficos interativos em **Chart.js** (gasto mensal `JAN`–`DEZ` e divisão por categoria com legenda completa), filtros de Ano + Mês, top fornecedores, **Trechos Aéreos traduzidos** (ex.: `MCP/BSB` → *Macapá (AP) → Brasília (DF)*), **Passageiros nas passagens** e tabela de notas fiscais com link para o PDF oficial.
+  3. **Funcionários:** pessoal de gabinete por ano (`pessoal-gabinete?ano=...`), contagem de ativos vs. exonerados (rotatividade), sinalização factual de mesmo sobrenome não-comum, link para o portal oficial e acesso à **página dedicada de Evolução Salarial (`/ui/funcionario/{codigo}`)** com gráfico empilhado mês a mês (2023–2026) de salário do cargo, auxílios/diárias e 13º/férias.
+  4. **Projetos:** subfiltros por resultado de mérito em plenário (*Aprovados*, *Rejeitados*, *Qualquer votação nominal*, *Sem votação*), tipo (`PL`, `PLP`, `PEC`, `PDL`, `PRC`), ordenação, distinção explícita entre votação de **Mérito** vs. **Req./Destaque Procedimental**, descrição oficial da votação e consulta sob demanda da situação atual.
+  5. **Comissões & Discursos:** órgãos, frentes parlamentares e **leitor modal de discurso completo** com transcrição limpa.
+  6. **Carreira & Histórico:** profissões, ocupações anteriores, mandatos externos e histórico cronológico de filiações e licenças.
+- **Painéis extras na página inicial:** **Buscar Projetos por Assunto** (índice fulltext), **Conexão entre Deputados** (menor caminho por coautoria + concordância em votações) e **Empresas & CNPJs** (rede de fornecedores compartilhados com opção *Ocultar fornecedores comuns* para revelar agências, consultorias e gráficas).
+
+---
+
+## Metodologia dos Indicadores e Critérios Científicos
+
+Seguindo boas práticas de Ciência Política e auditoria de dados públicos, a plataforma **não atribui estrelas nem nota única subjetiva** (que dependem de pesos arbitrários). Todos os selos e indicadores são matemáticos, reproduzíveis e auditáveis:
+
+1. **Concentração de Fornecedores — Índice HHI (*Herfindahl-Hirschman Index*):**
+   - Fórmula: $HHI = \sum_{i} \left(\frac{v_i}{\text{Total}}\right)^2 \times 10000$ (escala de `0` a `10.000`), usando o limiar clássico de alta concentração (**`≥ 2.500`**, adotado por órgãos antitruste como CADE e DoJ).
+   - **Regra de materialidade estatística:** calculado apenas para deputados com **`≥ 365 dias em exercício`** **e** **`≥ R$ 300.000` gastos** na Cota Parlamentar, evitando distorção por amostra pequena em suplentes recém-empossados ou parlamentares que quase não utilizam a cota.
+2. **Gasto Relativo à Própria UF (*Peer Benchmarking*):**
+   - Como o teto da CEAP varia conforme o estado (devido ao custo das passagens aéreas), calculamos o **gasto diário em exercício** (`gastoTotalCeap / diasEmExercicio`) de cada parlamentar com **`≥ 365 dias ativos`** e comparamos com a **mediana da sua própria UF**.
+   - `≥ +15%` acima da mediana da UF aciona o selo **`+X% UF`**; `≤ −35%` abaixo aciona **`Economia UF`**.
+3. **Presença Efetiva em Plenário (ajustada por intervalos reais de mandato):**
+   - Reconstruímos os intervalos exatos de `Entrada` (posse/reassunção) e `Saída` (licença/afastamento/renúncia) de cada deputado a partir de `/deputados/{id}/historico`, descontando integralmente períodos fora como Ministro ou Secretário de Estado e posses tardias de suplentes.
+   - `< 50%` (com `≥ 50` votações no período ativo) aciona **`Baixa presença`**; `≥ 85%` aciona **`Alta presença`**.
+4. **Efetividade Legislativa (Funil de Projetos — Volden & Wiseman, 2014):**
+   - Em vez de premiar volume bruto de projetos apresentados, separamos votações nominais de **Mérito** das votações **Procedimentais** (requerimentos de retirada de pauta, destaques, emendas e adiamentos — que representam ~96% das rejeições nominais ligadas a projetos via `SOBRE`), exibindo sempre a descrição oficial da votação.
+5. **Tratamento documentado de inconsistências conhecidas na API oficial:**
+   - A API REST v2 `/deputados/{id}/despesas` ocasionalmente devolve `valorLiquido` com sinal negativo quando `valorDocumento > 0` e `valorGlosa = 0` (enquanto o CSV em lote e o portal oficial trazem positivo). A função `_valor_liquido_despesa()` normaliza esses casos preservando estornos reais (`valorDocumento <= 0`).
+   - Os trechos aéreos (`txtTrecho`) e passageiros (`txtPassageiro`) vêm dos arquivos em lote `Ano-{ano}.csv.zip` (mais de 153 mil passagens detalhadas em 2023–2025) com tradução automática de códigos IATA para Cidade/UF/País.
 
 Exemplos prontos para colar e executar no GraphiQL (http://localhost:8001/graphql):
 
@@ -390,6 +424,7 @@ Você **não precisa alterar o código Python nem os templates** para virar o an
      .\.venv\Scripts\camara.exe carregar-m1 --limpar
      .\.venv\Scripts\camara.exe carregar-m2
      .\.venv\Scripts\camara.exe carregar-m3
+     .\.venv\Scripts\camara.exe carregar-gastos
      .\.venv\Scripts\camara.exe analisar-m5
      ```
    - Reinicie o contêiner da API para recarregar as variáveis do `.env`:
