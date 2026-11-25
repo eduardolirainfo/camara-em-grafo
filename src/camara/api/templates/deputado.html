@@ -190,61 +190,30 @@
   </div>
 </section>
 
-<!-- Faixa de Auditoria Avançada (Projetos & Cota Parlamentar) -->
+<!-- Detalhamento Legislativo (Autoria Principal vs. Coautoria e Projetos Simbólicos) -->
 {% set tot_p = (dep.get('projetosAutorPrincipal') or 0) + (dep.get('projetosCoautor') or 0) %}
-{% set pct_carona = ((dep.get('projetosCoautor') or 0) / tot_p * 100)|round(0)|int if tot_p > 0 else 0 %}
-{% set salto_div = dep.get('saltoDivulgacaoEleitoral') %}
-<section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 border-t border-l border-rule bg-paper mb-6">
+{% set pct_coautor = ((dep.get('projetosCoautor') or 0) / tot_p * 100)|round(0)|int if tot_p > 0 else 0 %}
+<section class="grid grid-cols-1 sm:grid-cols-2 border-t border-l border-rule bg-paper mb-6">
   <div class="tip-wrap border-r border-b border-rule p-3.5">
-    <div class="micro">Autor Principal vs. Carona</div>
+    <div class="micro">Autoria Principal vs. Coautoria</div>
     <div class="num text-sm font-semibold text-ink mt-1">
       <strong class="text-civic">{{ dep.get('projetosAutorPrincipal') or 0 }}</strong> principal ·
-      <strong class="{% if pct_carona >= 70 %}text-ochre{% else %}text-ink{% endif %}">{{ dep.get('projetosCoautor') or 0 }}</strong> coautor
+      <strong class="text-ink">{{ dep.get('projetosCoautor') or 0 }}</strong> coautor
     </div>
-    <div class="text-[11px] font-mono text-muted mt-0.5">{{ pct_carona }}% como coautor</div>
+    <div class="text-[11px] font-mono text-muted mt-0.5">{{ pct_coautor }}% como coautor</div>
     <div class="tip-box">
-      <strong>Efeito "Carona":</strong> separa projetos em que o deputado foi o <strong>1º signatário</strong> (autor principal) daqueles em que apenas assinou coautoria (ordem &gt; 1).
+      <strong>Ordem de assinatura:</strong> separa projetos em que o deputado é o <strong>1º signatário</strong> (<code class="font-mono">ordem = 1</code>) daqueles em que assinou como coautor (<code class="font-mono">ordem &gt; 1</code>). Projetos coletivos e PECs normalmente acumulam muitas coautorias.
     </div>
   </div>
 
   <div class="tip-wrap border-r border-b border-rule p-3.5">
-    <div class="micro">Projetos Homenagem / Datas</div>
+    <div class="micro">Projetos de Homenagem / Datas</div>
     <div class="num text-sm font-semibold text-ink mt-1">
       {{ dep.get('projetosHomenagem') or 0 }} <span class="text-xs font-normal text-muted">simbólico(s)</span>
     </div>
     <div class="text-[11px] font-mono text-muted mt-0.5">Dia Nacional, denominações e títulos</div>
     <div class="tip-box">
-      <strong>Projetos simbólicos vs. estruturais:</strong> contagem de PLs/PECs com ementa de homenagem, Dia Nacional, denominação de rodovias/obras ou Livro dos Heróis.
-    </div>
-  </div>
-
-  <div class="tip-wrap border-r border-b border-rule p-3.5">
-    <div class="micro">Pico Mensal de Combustível</div>
-    <div class="num text-sm font-semibold mt-1 {% if (dep.get('picoCombustivelTanques') or 0) >= 20 %}text-signal{% else %}text-ink{% endif %}">
-      {{ (dep.get('picoCombustivelMes') or 0)|brl }}
-    </div>
-    <div class="text-[11px] font-mono text-muted mt-0.5">
-      {% if (dep.get('picoCombustivelTanques') or 0) > 0 %}≈ {{ dep.picoCombustivelTanques }} tanques (50L){% if dep.get('picoCombustivelMesRef') %} em {{ dep.picoCombustivelMesRef }}{% endif %}{% else %}Sem gasto registrado{% endif %}
-    </div>
-    <div class="tip-box">
-      <strong>Equivalência em tanques:</strong> maior gasto mensal em combustíveis dividido por R$ 300 (referência de 50 litros a R$ 6,00/L). Pode incluir veículos usados por assessores do gabinete.
-    </div>
-  </div>
-
-  <div class="tip-wrap border-r border-b border-rule p-3.5">
-    <div class="micro">Notas Repetidas &amp; Salto Eleitoral</div>
-    <div class="num text-sm font-semibold text-ink mt-1">
-      <strong class="{% if (dep.get('notasFracionadas') or 0) >= 15 %}text-signal{% else %}text-ink{% endif %}">{{ dep.get('notasFracionadas') or 0 }}</strong> dia/CNPJ
-      {% if salto_div is not none %}
-      · <strong class="{% if salto_div >= 1.5 %}text-signal{% else %}text-civic{% endif %}">{% if salto_div >= 1 %}+{{ ((salto_div - 1) * 100)|round(0)|int }}%{% else %}{{ ((salto_div - 1) * 100)|round(0)|int }}%{% endif %}</strong>
-      {% endif %}
-    </div>
-    <div class="text-[11px] font-mono text-muted mt-0.5">
-      Repetições: {{ (dep.get('notasFracionadasValor') or 0)|brl_curto }}{% if salto_div is not none %} · Divulgação ano par{% endif %}
-    </div>
-    <div class="tip-box">
-      <strong>Notas repetidas (mesmo dia/CNPJ):</strong> ocorrências de ≥ 2 pagamentos no mesmo dia ao mesmo fornecedor (excluindo passagens, telefonia, correios e táxi).<br>
-      <strong>Salto eleitoral:</strong> média mensal de Divulgação Parlamentar em anos eleitorais (2024/2026) comparada a anos não eleitorais (2023/2025).
+      <strong>Classificação textual da ementa:</strong> contagem de projetos no recorte (<code class="font-mono">PL, PLP, PEC, PDL, PRC</code>) cuja ementa menciona Dia Nacional, denominações de vias/obras, homenagens ou Livro dos Heróis.
     </div>
   </div>
 </section>

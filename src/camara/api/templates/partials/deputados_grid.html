@@ -66,7 +66,7 @@
       </div>
     </div>
 
-    <!-- Selos objetivos em SVG (indicadores auditáveis, sem estrelas subjetivas) -->
+    <!-- Selos descritivos em SVG (indicadores matemáticos objetivos, sem notas subjetivas) -->
     {% set ratio_uf = d.get('gastoVsMedianaUf') %}
     {% set tem_hhi = (d.get('hhiFornecedores') or 0) >= 2500 %}
     {% set acima_uf = ratio_uf is not none and ratio_uf >= 1.15 %}
