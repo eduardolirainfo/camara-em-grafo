@@ -157,14 +157,17 @@
       Consultorias: <strong>{{ dep.gastoConsultorias|brl }}</strong>
     </div>
   </div>
-  <div class="border-r border-b border-rule p-3.5">
+  <div class="tip-wrap border-r border-b border-rule p-3.5">
     <div class="micro">Projetos (Aprov. / Vot.)</div>
     <div class="num text-xl font-semibold text-ink mt-1">{{ dep.totalProposicoes }}</div>
     <div class="text-[11px] font-mono text-muted mt-0.5">
       <strong class="text-civic">{{ dep.projetosAprovados or 0 }}</strong> aprov. · {{ dep.projetosVotados or 0 }} vot.
     </div>
+    <div class="tip-box">
+      <strong>Funil legislativo (2023–2026):</strong> assinou <strong>{{ dep.totalProposicoes }}</strong> projetos (PL, PLP, PEC, PDL, PRC); <strong>{{ dep.projetosVotados or 0 }}</strong> tiveram votação nominal em plenário e <strong>{{ dep.projetosAprovados or 0 }}</strong> tiveram o mérito aprovado.
+    </div>
   </div>
-  <div class="border-r border-b border-rule p-3.5">
+  <div class="tip-wrap border-r border-b border-rule p-3.5">
     <div class="micro">Votos / HHI Fornec.</div>
     <div class="num text-xl font-semibold text-ink mt-1">{{ dep.totalVotos }}</div>
     {% if (dep.hhiFornecedores or 0) > 0 %}
@@ -172,6 +175,10 @@
       HHI: {{ dep.hhiFornecedores }}
     </div>
     {% endif %}
+    <div class="tip-box">
+      <strong>Votos nominais:</strong> participou de <strong>{{ dep.totalVotos }}</strong> votações{% if dep.votacoesAtivo %} de {{ dep.votacoesAtivo }} enquanto esteve em exercício{% endif %}.<br>
+      <strong>HHI ({{ dep.hhiFornecedores or 0 }}):</strong> Índice Herfindahl-Hirschman (0–10.000) de concentração de fornecedores da Cota. Acima de <strong>2.500</strong> indica alta concentração em poucos CNPJs (calculado apenas com ≥ 365 dias e ≥ R$ 300 mil).
+    </div>
   </div>
   <div class="border-r border-b border-rule p-3.5">
     <div class="micro">Equipe no Gabinete</div>
