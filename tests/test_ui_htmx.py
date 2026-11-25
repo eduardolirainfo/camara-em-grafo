@@ -144,26 +144,30 @@ class _FakeFichaService(FichaDeputadoService):
         ]
 
     async def obter_pessoal_gabinete(
-        self, dep_id: int, ano: int, nome_civil: str | None = None
+        self, dep_id: int, ano: int, nome_civil: str | None = None, busca: str | None = None
     ) -> dict[str, Any]:
+        itens = [
+            {
+                "nome": "MARIA EXEMPLO",
+                "grupo": "SECRETÁRIO PARLAMENTAR",
+                "cargo": "SP15",
+                "periodo": "Desde 01/02/2023",
+                "ativo": True,
+                "url_remuneracao": "https://www.camara.leg.br/transparencia/recursos-humanos/remuneracao/abc",
+                "mesmo_sobrenome": False,
+                "sobrenomes_comuns": [],
+            }
+        ]
+        if busca:
+            itens = [it for it in itens if busca.upper() in it["nome"].upper()]
         return {
             "ano": ano,
-            "ativos": 1,
+            "ativos": len(itens),
             "exonerados": 0,
-            "total": 1,
+            "total": len(itens),
+            "total_sem_filtro": 1,
             "mesmo_sobrenome_qtd": 0,
-            "itens": [
-                {
-                    "nome": "MARIA EXEMPLO",
-                    "grupo": "SECRETÁRIO PARLAMENTAR",
-                    "cargo": "SP15",
-                    "periodo": "Desde 01/02/2023",
-                    "ativo": True,
-                    "url_remuneracao": "https://www.camara.leg.br/transparencia/recursos-humanos/remuneracao/abc",
-                    "mesmo_sobrenome": False,
-                    "sobrenomes_comuns": [],
-                }
-            ],
+            "itens": itens,
         }
 
     async def obter_atuacao(self, dep_id: int) -> dict[str, Any]:
@@ -202,6 +206,14 @@ def test_ui_pagina_inicial_e_ficha_completa(tmp_path: Path) -> None:
     r_func = client.get("/ui/deputado/204501/tab/funcionarios")
     assert r_func.status_code == 200
     assert "MARIA EXEMPLO" in r_func.text
+
+    r_func_todos = client.get("/ui/deputado/204501/tab/funcionarios?ano=todos&busca=MARIA")
+    assert r_func_todos.status_code == 200
+    assert "MARIA EXEMPLO" in r_func_todos.text
+
+    r_func_miss = client.get("/ui/deputado/204501/tab/funcionarios?ano=todos&busca=INEXISTENTE")
+    assert r_func_miss.status_code == 200
+    assert "Nenhum vínculo localizado" in r_func_miss.text
 
     assert url_bandeira_uf("SP") is not None
     assert url_logo_partido("PT") == "https://www.camara.leg.br/internet/Deputado/img/partidos/PT.gif"

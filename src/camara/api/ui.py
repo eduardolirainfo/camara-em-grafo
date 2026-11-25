@@ -390,18 +390,33 @@ def criar_ui_router(
     async def tab_funcionarios(
         request: Request,
         dep_id: int,
-        ano: int | None = None,
+        ano: str | None = None,
+        busca: str | None = None,
     ) -> HTMLResponse:
-        ano_sel = ano or anos_ordenados[0]
+        busca_limpa = (busca or "").strip()
+        modo_todos = (ano or "").strip().lower() == "todos"
         nome_civil = ""
         try:
             det = await ficha_service.obter_detalhes_api(dep_id)
             nome_civil = str(det.get("nomeCivil") or "")
         except _API_ERROS:
             pass
-        pessoal = await ficha_service.obter_pessoal_gabinete(
-            dep_id, ano=ano_sel, nome_civil=nome_civil
-        )
+
+        if modo_todos:
+            pessoal = await ficha_service.obter_pessoal_gabinete_todos_anos(
+                dep_id,
+                anos=anos_ordenados,
+                nome_civil=nome_civil,
+                busca=busca_limpa,
+            )
+            ano_ctx: int | str = "todos"
+        else:
+            ano_sel = int(ano) if ano and ano.strip().isdigit() else anos_ordenados[0]
+            pessoal = await ficha_service.obter_pessoal_gabinete(
+                dep_id, ano=ano_sel, nome_civil=nome_civil, busca=busca_limpa
+            )
+            ano_ctx = ano_sel
+
         return templates.TemplateResponse(
             request=request,
             name="partials/tab_funcionarios.html",
@@ -409,7 +424,9 @@ def criar_ui_router(
                 "pessoal": pessoal,
                 "funcionarios": pessoal["itens"],
                 "dep_id": dep_id,
-                "ano": ano_sel,
+                "ano": ano_ctx,
+                "modo_todos": modo_todos,
+                "busca": busca_limpa,
             },
         )
 

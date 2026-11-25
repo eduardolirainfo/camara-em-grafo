@@ -763,6 +763,7 @@ class FichaDeputadoService:
         dep_id: int,
         ano: int,
         nome_civil: str | None = None,
+        busca: str | None = None,
     ) -> dict[str, Any]:
         """Consulta a página oficial de pessoal de gabinete da Câmara (ativos + exonerados no ano)
         com link direto para o contracheque individual e sinalização factual de mesmo sobrenome."""
@@ -834,13 +835,102 @@ class FichaDeputadoService:
             )
 
         enriquecidos.sort(key=lambda x: (not x.get("ativo", True), not x["mesmo_sobrenome"], x["nome"]))
+        total_sem_filtro = len(enriquecidos)
+        termo = _normalizar_texto_nome(busca or "")
+        if termo:
+            tokens_busca = [t for t in termo.split() if t]
+            enriquecidos = [
+                it
+                for it in enriquecidos
+                if all(t in _normalizar_texto_nome(str(it.get("nome") or "")) for t in tokens_busca)
+            ]
+            ativos = sum(1 for x in enriquecidos if x.get("ativo", True))
+            exonerados = len(enriquecidos) - ativos
+            mesmo_sobrenome_qtd = sum(1 for x in enriquecidos if x.get("mesmo_sobrenome"))
         return {
             "ano": ano,
             "ativos": ativos,
             "exonerados": exonerados,
             "total": len(enriquecidos),
+            "total_sem_filtro": total_sem_filtro,
             "mesmo_sobrenome_qtd": mesmo_sobrenome_qtd,
             "itens": enriquecidos,
+        }
+
+    async def obter_pessoal_gabinete_todos_anos(
+        self,
+        dep_id: int,
+        anos: list[int],
+        nome_civil: str | None = None,
+        busca: str | None = None,
+    ) -> dict[str, Any]:
+        """Consolida pessoal de gabinete (ativos e exonerados) em todos os anos da legislatura."""
+        anos_ord = sorted(set(anos), reverse=True)
+        resultados = await asyncio.gather(
+            *[self.obter_pessoal_gabinete(dep_id, ano=y, nome_civil=nome_civil) for y in anos_ord],
+            return_exceptions=True,
+        )
+
+        por_pessoa: dict[str, dict[str, Any]] = {}
+        ano_mais_recente = anos_ord[0] if anos_ord else 0
+        for y, res in zip(anos_ord, resultados, strict=False):
+            if not isinstance(res, dict):
+                continue
+            for item in res.get("itens") or []:
+                nome = str(item.get("nome") or "").strip()
+                if not nome:
+                    continue
+                chave = str(item.get("codigo_remuneracao") or "").strip() or _normalizar_texto_nome(nome)
+                if chave not in por_pessoa:
+                    por_pessoa[chave] = {
+                        **item,
+                        "anos": [y],
+                        "periodos": [item["periodo"]] if item.get("periodo") else [],
+                        "ativo": bool(item.get("ativo", False)) and y == ano_mais_recente,
+                    }
+                else:
+                    atual = por_pessoa[chave]
+                    if y not in atual["anos"]:
+                        atual["anos"].append(y)
+                    per = str(item.get("periodo") or "").strip()
+                    if per and per not in atual["periodos"]:
+                        atual["periodos"].append(per)
+                    if not atual.get("codigo_remuneracao") and item.get("codigo_remuneracao"):
+                        atual["codigo_remuneracao"] = item["codigo_remuneracao"]
+                    if not atual.get("url_remuneracao") and item.get("url_remuneracao"):
+                        atual["url_remuneracao"] = item["url_remuneracao"]
+                    if y == ano_mais_recente and item.get("ativo"):
+                        atual["ativo"] = True
+
+        itens = list(por_pessoa.values())
+        for it in itens:
+            it["anos"] = sorted(it["anos"], reverse=True)
+            it["periodo"] = " · ".join(it["periodos"][:2]) if it["periodos"] else it.get("periodo", "")
+
+        total_sem_filtro = len(itens)
+        termo = _normalizar_texto_nome(busca or "")
+        if termo:
+            tokens_busca = [t for t in termo.split() if t]
+            filtrados: list[dict[str, Any]] = []
+            for it in itens:
+                nome_norm = _normalizar_texto_nome(str(it.get("nome") or ""))
+                if all(t in nome_norm for t in tokens_busca):
+                    filtrados.append(it)
+            itens = filtrados
+
+        itens.sort(key=lambda x: (not x.get("ativo", False), not x.get("mesmo_sobrenome", False), x["nome"]))
+        ativos = sum(1 for x in itens if x.get("ativo"))
+        exonerados = len(itens) - ativos
+        mesmo_sobrenome_qtd = sum(1 for x in itens if x.get("mesmo_sobrenome"))
+        return {
+            "ano": "todos",
+            "anos_consultados": sorted(anos_ord),
+            "ativos": ativos,
+            "exonerados": exonerados,
+            "total": len(itens),
+            "total_sem_filtro": total_sem_filtro,
+            "mesmo_sobrenome_qtd": mesmo_sobrenome_qtd,
+            "itens": itens,
         }
 
     async def obter_remuneracao_ano(self, codigo: str, ano: int) -> list[dict[str, Any]]:

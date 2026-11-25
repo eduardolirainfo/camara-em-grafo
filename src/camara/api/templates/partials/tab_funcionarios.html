@@ -1,34 +1,73 @@
 <div class="space-y-4">
-  <div class="bg-white border border-rule p-4 flex flex-wrap items-center justify-between gap-3">
-    <div>
-      <div class="micro">Pessoal de Gabinete · {{ ano }}</div>
-      <h2 class="font-bold text-ink text-base mt-0.5">
-        Equipe e Rotatividade no Gabinete (<span class="num">{{ pessoal.total }}</span> em {{ ano }})
-      </h2>
-      <p class="text-xs text-muted mt-0.5">
-        Fonte oficial: portal de Pessoal de Gabinete da Câmara dos Deputados (com link individual para o contracheque).
-      </p>
+  <div class="bg-white border border-rule p-4 space-y-3">
+    <div class="flex flex-wrap items-center justify-between gap-3">
+      <div>
+        <div class="micro">
+          Pessoal de Gabinete · {% if modo_todos %}Todos os anos ({{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}){% else %}{{ ano }}{% endif %}
+        </div>
+        <h2 class="font-bold text-ink text-base mt-0.5">
+          Equipe e Rotatividade no Gabinete (<span class="num">{{ pessoal.total }}</span>
+          {% if modo_todos %}nomes únicos em {{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}{% else %}em {{ ano }}{% endif %})
+        </h2>
+        <p class="text-xs text-muted mt-0.5">
+          Fonte oficial: portal de Pessoal de Gabinete da Câmara dos Deputados (ativos e exonerados, com link individual para o contracheque).
+        </p>
+      </div>
+      <div class="flex flex-wrap items-center gap-1">
+        <button hx-get="/ui/deputado/{{ dep_id }}/tab/funcionarios?ano=todos{% if busca %}&busca={{ busca|urlencode }}{% endif %}"
+                hx-target="#tab-conteudo"
+                hx-indicator="#tab-loading"
+                class="px-3 py-1.5 font-mono text-xs border transition-colors {% if modo_todos %}bg-ink text-paper border-ink font-semibold{% else %}bg-paper text-ink border-rule hover:border-ink{% endif %}">
+          Todos ({{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }})
+        </button>
+        {% for y in ANOS_DISPONIVEIS %}
+        <button hx-get="/ui/deputado/{{ dep_id }}/tab/funcionarios?ano={{ y }}{% if busca %}&busca={{ busca|urlencode }}{% endif %}"
+                hx-target="#tab-conteudo"
+                hx-indicator="#tab-loading"
+                class="px-3 py-1.5 font-mono text-xs border transition-colors {% if not modo_todos and y == ano %}bg-ink text-paper border-ink font-semibold{% else %}bg-paper text-ink border-rule hover:border-ink{% endif %}">
+          {{ y }}
+        </button>
+        {% endfor %}
+      </div>
     </div>
-    <div class="flex flex-wrap items-center gap-1">
-      {% for y in ANOS_DISPONIVEIS %}
-      <button hx-get="/ui/deputado/{{ dep_id }}/tab/funcionarios?ano={{ y }}"
+
+    <!-- Busca por nome em todos os anos -->
+    <form hx-get="/ui/deputado/{{ dep_id }}/tab/funcionarios"
+          hx-target="#tab-conteudo"
+          hx-indicator="#tab-loading"
+          class="flex flex-wrap items-center gap-2 pt-2 border-t border-rule">
+      <input type="hidden" name="ano" value="todos">
+      <div class="flex-1 min-w-[220px]">
+        <input type="text"
+               name="busca"
+               value="{{ busca }}"
+               placeholder="Buscar nome ou sobrenome em todos os anos (ex.: Franceschetto, Silva)..."
+               class="w-full px-3 py-1.5 text-xs border border-rule bg-paper text-ink focus:outline-none focus:border-ink">
+      </div>
+      <button type="submit"
+              class="px-3 py-1.5 bg-ink hover:bg-signal text-paper font-mono text-[11px] uppercase tracking-[0.06em] transition-colors">
+        Verificar em todos os anos
+      </button>
+      {% if busca %}
+      <button type="button"
+              hx-get="/ui/deputado/{{ dep_id }}/tab/funcionarios?ano={{ 'todos' if modo_todos else ano }}"
               hx-target="#tab-conteudo"
               hx-indicator="#tab-loading"
-              class="px-3 py-1.5 font-mono text-xs border transition-colors {% if y == ano %}bg-ink text-paper border-ink font-semibold{% else %}bg-paper text-ink border-rule hover:border-ink{% endif %}">
-        {{ y }}
+              class="px-2.5 py-1.5 border border-rule bg-paper hover:border-ink text-ink font-mono text-[11px] uppercase">
+        Limpar
       </button>
-      {% endfor %}
-    </div>
+      {% endif %}
+    </form>
   </div>
 
   <!-- Indicadores objetivos da equipe -->
   <div class="grid grid-cols-1 sm:grid-cols-3 border-t border-l border-rule bg-white">
     <div class="border-r border-b border-rule p-3.5">
-      <div class="micro">Ativos no Gabinete</div>
+      <div class="micro">{% if modo_todos %}Ativos em {{ ANOS_DISPONIVEIS|max }}{% else %}Ativos no Gabinete{% endif %}</div>
       <div class="num text-2xl font-semibold text-civic mt-1">{{ pessoal.ativos }}</div>
     </div>
     <div class="border-r border-b border-rule p-3.5">
-      <div class="micro">Exonerados / Saíram em {{ ano }}</div>
+      <div class="micro">{% if modo_todos %}Exonerados / Saíram ({{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}){% else %}Exonerados / Saíram em {{ ano }}{% endif %}</div>
       <div class="num text-2xl font-semibold {% if pessoal.exonerados >= 10 %}text-ochre{% else %}text-ink{% endif %} mt-1">{{ pessoal.exonerados }}</div>
     </div>
     <div class="border-r border-b border-rule p-3.5">
@@ -39,12 +78,12 @@
 
   <div class="flex flex-wrap items-center justify-between gap-2 bg-paper border-l-2 border-ink border-y border-r border-rule p-3.5 text-xs text-muted">
     <span>
-      <strong class="text-ink">Nota de verificação:</strong> clique em <em>Ver salário ↗</em> para consultar o contracheque oficial de cada funcionário mês a mês. A marcação <em>Mesmo sobrenome</em> indica apenas coincidência textual com o nome civil do parlamentar — não comprova parentesco nem ilegalidade.
+      <strong class="text-ink">Nota de verificação:</strong> clique em <em>Gráfico salarial</em> ou no nome para consultar o contracheque oficial mês a mês. A marcação <em>Mesmo sobrenome</em> indica apenas coincidência textual com o nome civil do parlamentar — não comprova parentesco nem ilegalidade.
     </span>
     <div class="flex flex-wrap gap-2 shrink-0">
-      <a href="https://www.camara.leg.br/deputados/{{ dep_id }}/pessoal-gabinete?ano={{ ano }}" target="_blank"
+      <a href="https://www.camara.leg.br/deputados/{{ dep_id }}/pessoal-gabinete?ano={{ ANOS_DISPONIVEIS|max if modo_todos else ano }}" target="_blank"
          class="px-2.5 py-1.5 bg-ink hover:bg-signal text-paper font-mono text-[11px] uppercase tracking-[0.06em] transition-colors">
-        Lista Oficial {{ ano }} ↗
+        Lista Oficial {{ ANOS_DISPONIVEIS|max if modo_todos else ano }} ↗
       </a>
       <a href="https://www2.camara.leg.br/transparencia/recursos-humanos/remuneracao" target="_blank"
          class="px-2.5 py-1.5 border border-ink bg-white hover:bg-tint text-ink font-mono text-[11px] uppercase tracking-[0.06em] transition-colors">
@@ -54,9 +93,34 @@
   </div>
 
   {% if not funcionarios %}
-  <div class="bg-white border border-rule p-6 text-center text-sm text-muted">
-    Nenhum funcionário listado para este gabinete em {{ ano }} (comum para deputados licenciados, suplentes fora de exercício ou renúncias).
-  </div>
+    {% if busca %}
+    <div class="bg-red-50/70 border-l-4 border-signal border-y border-r border-rule p-5 text-xs">
+      <div class="font-bold text-signal uppercase font-mono tracking-[0.06em]">
+        Nenhum vínculo localizado {% if modo_todos %}em {{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}{% else %}em {{ ano }}{% endif %}
+      </div>
+      <p class="text-ink mt-1.5 leading-relaxed">
+        Não foi encontrado nenhum funcionário (ativo ou exonerado) com o termo <strong>"{{ busca }}"</strong>
+        no portal oficial de Pessoal de Gabinete deste parlamentar
+        {% if modo_todos %}
+          em nenhum ano da 57ª Legislatura (<strong>{{ ANOS_DISPONIVEIS|min }} a {{ ANOS_DISPONIVEIS|max }}</strong>, entre {{ pessoal.get('total_sem_filtro', 0) }} nomes consultados).
+        {% else %}
+          em <strong>{{ ano }}</strong>.
+        {% endif %}
+      </p>
+      {% if not modo_todos %}
+      <button hx-get="/ui/deputado/{{ dep_id }}/tab/funcionarios?ano=todos&busca={{ busca|urlencode }}"
+              hx-target="#tab-conteudo"
+              hx-indicator="#tab-loading"
+              class="mt-2.5 px-3 py-1.5 bg-ink hover:bg-signal text-paper font-mono text-[11px] uppercase">
+        Verificar em todos os anos ({{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}) →
+      </button>
+      {% endif %}
+    </div>
+    {% else %}
+    <div class="bg-white border border-rule p-6 text-center text-sm text-muted">
+      Nenhum funcionário listado para este gabinete {% if modo_todos %}entre {{ ANOS_DISPONIVEIS|min }} e {{ ANOS_DISPONIVEIS|max }}{% else %}em {{ ano }}{% endif %} (comum para deputados licenciados, suplentes fora de exercício ou renúncias).
+    </div>
+    {% endif %}
   {% else %}
   <div class="bg-white border border-rule p-4 overflow-x-auto">
     <table class="w-full text-left text-xs">
@@ -64,6 +128,7 @@
         <tr>
           <th class="py-2.5 px-2">Nome</th>
           <th class="py-2.5 px-2">Situação</th>
+          {% if modo_todos %}<th class="py-2.5 px-2">Anos</th>{% endif %}
           <th class="py-2.5 px-2">Cargo / Nível</th>
           <th class="py-2.5 px-2">Período de Exercício</th>
           <th class="py-2.5 px-2 text-right">Contracheque</th>
@@ -95,6 +160,13 @@
             <span class="px-1.5 py-0.5 bg-tint border border-rule text-muted font-mono text-[10px] uppercase">Exonerado</span>
             {% endif %}
           </td>
+          {% if modo_todos %}
+          <td class="py-2 px-2 whitespace-nowrap font-mono text-[10px]">
+            {% for y_f in f.get('anos', []) %}
+            <span class="inline-block px-1.5 py-0.5 bg-paper border border-rule text-ink mr-0.5">{{ y_f }}</span>
+            {% endfor %}
+          </td>
+          {% endif %}
           <td class="py-2 px-2"><span class="px-2 py-0.5 bg-paper border border-rule font-mono text-[11px]">{{ f.cargo or '—' }}</span></td>
           <td class="py-2 px-2 num text-muted whitespace-nowrap">{{ f.periodo or '—' }}</td>
           <td class="py-2 px-2 text-right whitespace-nowrap font-mono space-x-2">

@@ -349,8 +349,14 @@
             {% elif ps.get('vinculo') == 'externo' %}
             <span class="tip-wrap px-1.5 py-0.5 bg-red-50 border border-signal text-signal font-mono text-[9px] font-semibold uppercase">
               Fora da equipe ({{ ano }})
-              <span class="tip-box">Não localizado na lista oficial de pessoal de gabinete deste deputado em {{ ano }}. Pode ser assessor de liderança/comissão, abreviação no bilhete ou terceiro.</span>
+              <span class="tip-box">Não localizado na lista oficial de pessoal de gabinete deste deputado em {{ ano }}. Pode ser assessor de liderança/comissão, dependente, abreviação no bilhete ou terceiro.</span>
             </span>
+            <button hx-get="/ui/deputado/{{ dep_id }}/tab/funcionarios?ano=todos&busca={{ ps.passageiro|urlencode }}"
+                    hx-target="#tab-conteudo"
+                    hx-indicator="#tab-loading"
+                    class="font-mono text-[10px] text-cobalt underline underline-offset-2 hover:text-signal">
+              Checar equipe (todos os anos) →
+            </button>
             {% endif %}
           </div>
           <span class="num text-muted shrink-0">
