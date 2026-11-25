@@ -552,7 +552,7 @@ class FichaDeputadoService:
             try:
                 p_res = await self.obter_pessoal_gabinete(dep_id, ano=ano)
                 equipe_ano_atual = [str(f.get("nome") or "") for f in p_res.get("itens") or []]
-            except Exception:
+            except (httpx.HTTPError, OSError, ValueError):
                 equipe_ano_atual = []
 
         tot_pass: dict[str, dict[str, Any]] = {

@@ -2,7 +2,7 @@
 
 Dados abertos da Câmara dos Deputados (57ª Legislatura, 2023–2027) modelados em grafo no **Neo4j + Graph Data Science (GDS)**, com coleta assíncrona em **Python**, API **GraphQL** (FastAPI + Strawberry), rotas **REST** de benchmark e interface editorial responsiva em **HTMX + Chart.js** (tema Claro e Escuro).
 
-O objetivo é tornar auditável a atuação parlamentar além da sigla do partido — gastos da Cota Parlamentar (CEAP), rede de fornecedores (CNPJs), presença real em plenário, votos contra o próprio partido, trechos aéreos, evolução salarial de funcionários de gabinete, projetos e discursos — sempre com dados públicos oficiais, fórmulas transparentes e link direto para o registro de origem na Câmara.
+O objetivo é organizar e explorar a atuação parlamentar além da sigla do partido — gastos da Cota Parlamentar (CEAP), rede de fornecedores (CNPJs), presença em votações nominais, votos divergentes da orientação partidária, trechos aéreos, pessoal de gabinete, projetos e discursos — exclusivamente a partir de dados públicos oficiais, com fórmulas transparentes, limitações explícitas e link direto para a fonte original, sem atribuir juízos de irregularidade nem expor pessoas físicas que não exercem mandato.
 
 - **Fontes oficiais:** [API v2 de Dados Abertos da Câmara](https://dadosabertos.camara.leg.br/swagger/api.html), [Arquivos em Lote (CSV/ZIP)](https://dadosabertos.camara.leg.br/arquivos/) e [Portal de Transparência / Pessoal de Gabinete](https://www.camara.leg.br/transparencia/)
 
@@ -154,45 +154,46 @@ Com o Neo4j rodando e populado, suba a API localmente via Uvicorn (ou junto com 
 Interface editorial própria em **tipografia suíça** (`Inter` + `IBM Plex Mono` com números tabulares), **tema Claro e Escuro**, responsiva para desktop/celular e com barra global de carregamento:
 
 - **Explorador de Deputados (`/ui`):**
-  - Filtros combináveis por nome, situação (*Apenas em exercício* por padrão, *Todos*, *Fora de exercício*), UF (com bandeira), partido (com logo oficial), grupo de votação (descoberto automaticamente via GDS Louvain/Leiden) e 16 ordenações (gasto CEAP, viagens, divulgação, aeronaves, consultorias, concentração HHI, gasto acima da mediana da UF, custo por voto, presença, votos contra o partido, equipe, trocas de partido e projetos aprovados).
+  - Filtros combináveis por nome, situação (*Apenas em exercício* por padrão, *Todos*, *Fora de exercício*), UF (com bandeira), partido (com logo oficial), grupo de votação (descoberto automaticamente via GDS Louvain/Leiden) e ordenações descritivas (gasto CEAP, viagens, divulgação, aeronaves, consultorias, concentração HHI, gasto relativo à mediana da UF, custo por voto, presença, votos contra a orientação do partido, equipe, trocas de partido, projetos aprovados, projetos simbólicos e coautorias).
   - Persistência completa dos filtros, ordenação, aba ativa e paginação na URL (`/ui?...`) e no botão *Voltar*.
-  - **Selos objetivos em SVG** (sem estrelas subjetivas) e **Modal de Metodologia** acessível no cabeçalho.
+  - **Selos descritivos em SVG** (sem notas subjetivas) e **Modal de Metodologia** acessível no cabeçalho.
 - **Ficha completa do deputado (`/ui/deputado/{id}`)** com 6 abas carregadas sob demanda via HTMX:
-  1. **Alianças & Votos:** principais coautores, quem vota mais parecido, mesmos assuntos legislativos e taxa de votos contra a orientação do próprio partido.
-  2. **Dinheiro (Cota Parlamentar):** gráficos interativos em **Chart.js** (gasto mensal `JAN`–`DEZ` e divisão por categoria com legenda completa), filtros de Ano + Mês, top fornecedores, **Trechos Aéreos traduzidos** (ex.: `MCP/BSB` → *Macapá (AP) → Brasília (DF)*), **Passageiros nas passagens** e tabela de notas fiscais com link para o PDF oficial.
-  3. **Funcionários:** pessoal de gabinete por ano (`pessoal-gabinete?ano=...`), contagem de ativos vs. exonerados (rotatividade), sinalização factual de mesmo sobrenome não-comum, link para o portal oficial e acesso à **página dedicada de Evolução Salarial (`/ui/funcionario/{codigo}`)** com gráfico empilhado mês a mês (2023–2026) de salário do cargo, auxílios/diárias e 13º/férias.
+  1. **Alianças & Votos:** principais coautores, quem vota mais parecido, mesmos assuntos legislativos e taxa de votos divergentes da orientação do próprio partido.
+  2. **Dinheiro (Cota Parlamentar):** gráficos interativos em **Chart.js** (gasto mensal `JAN`–`DEZ` e divisão por categoria com legenda completa), filtros de Ano + Mês, top fornecedores com consulta cadastral da pessoa jurídica na Receita Federal (BrasilAPI), **Trechos Aéreos traduzidos** (ex.: `MCP/BSB` → *Macapá (AP) → Brasília (DF)*), **Resumo agregado de passagens** (parlamentar, equipe no ano e outros registros, sem exposição nominal de terceiros) e tabela de notas fiscais com link para o PDF oficial.
+  3. **Funcionários:** pessoal de gabinete por ano ou consolidado em todos os anos (`2023–2026`), com busca por nome, contagem de ativos vs. exonerados, cargo/nível, período de exercício e link direto para o Portal Oficial da Câmara.
   4. **Projetos:** subfiltros por resultado de mérito em plenário (*Aprovados*, *Rejeitados*, *Qualquer votação nominal*, *Sem votação*), tipo (`PL`, `PLP`, `PEC`, `PDL`, `PRC`), ordenação, distinção explícita entre votação de **Mérito** vs. **Req./Destaque Procedimental**, descrição oficial da votação e consulta sob demanda da situação atual.
   5. **Comissões & Discursos:** órgãos, frentes parlamentares e **leitor modal de discurso completo** com transcrição limpa.
   6. **Carreira & Histórico:** profissões, ocupações anteriores, mandatos externos e histórico cronológico de filiações e licenças.
-- **Painéis extras na página inicial:** **Buscar Projetos por Assunto** (índice fulltext), **Conexão entre Deputados** (menor caminho por coautoria + concordância em votações) e **Empresas & CNPJs** (rede de fornecedores compartilhados com opção *Ocultar fornecedores comuns* para revelar agências, consultorias e gráficas).
+- **Painéis extras na página inicial:** **Buscar Projetos por Assunto** (índice fulltext), **Conexão entre Deputados** (menor caminho por coautoria + concordância em votações) e **Empresas & CNPJs** (rede de fornecedores compartilhados com consulta cadastral da empresa na Receita Federal e opção *Ocultar fornecedores comuns*).
 
 ---
 
-## Metodologia dos Indicadores e Critérios Científicos
+## Metodologia dos Indicadores, Recortes e Limitações
 
-Seguindo boas práticas de Ciência Política e auditoria de dados públicos, a plataforma **não atribui estrelas nem nota única subjetiva** (que dependem de pesos arbitrários). Todos os selos e indicadores são matemáticos, reproduzíveis e auditáveis:
+A plataforma **não atribui estrelas, notas subjetivas ou juízos de irregularidade**, nem expõe dados pessoais de terceiros que não exercem mandato parlamentar. Cada indicador é descritivo e reproduzível:
 
 1. **Concentração de Fornecedores — Índice HHI (*Herfindahl-Hirschman Index*):**
-   - Fórmula: $HHI = \sum_{i} \left(\frac{v_i}{\text{Total}}\right)^2 \times 10000$ (escala de `0` a `10.000`), usando o limiar clássico de alta concentração (**`≥ 2.500`**, adotado por órgãos antitruste como CADE e DoJ).
-   - **Regra de materialidade estatística:** calculado apenas para deputados com **`≥ 365 dias em exercício`** **e** **`≥ R$ 300.000` gastos** na Cota Parlamentar, evitando distorção por amostra pequena em suplentes recém-empossados ou parlamentares que quase não utilizam a cota.
-2. **Gasto Relativo à Própria UF (*Peer Benchmarking*):**
-   - Como o teto da CEAP varia conforme o estado (devido ao custo das passagens aéreas), calculamos o **gasto diário em exercício** (`gastoTotalCeap / diasEmExercicio`) de cada parlamentar com **`≥ 365 dias ativos`** e comparamos com a **mediana da sua própria UF**.
-   - `≥ +15%` acima da mediana da UF aciona o selo **`+X% UF`**; `≤ −35%` abaixo aciona **`Economia UF`**.
-3. **Presença Efetiva em Plenário (ajustada por intervalos reais de mandato):**
-   - Reconstruímos os intervalos exatos de `Entrada` (posse/reassunção) e `Saída` (licença/afastamento/renúncia) de cada deputado a partir de `/deputados/{id}/historico`, descontando integralmente períodos fora como Ministro ou Secretário de Estado e posses tardias de suplentes.
-   - `< 50%` (com `≥ 50` votações no período ativo) aciona **`Baixa presença`**; `≥ 85%` aciona **`Alta presença`**.
-4. **Efetividade Legislativa, Autor Principal ("Carona") e Projetos Simbólicos (Volden & Wiseman, 2014):**
-   - Separamos votações nominais de **Mérito** das votações **Procedimentais** (requerimentos de retirada de pauta, destaques, emendas e adiamentos — ~96% das rejeições nominais ligadas via `SOBRE`), exibindo sempre a descrição oficial da votação.
-   - Separamos **autor principal** (`ordemAssinatura = 1`) de **coautorias ("efeito carona")** (`ordem > 1`) e contabilizamos **projetos simbólicos/homenagens** (*Dia Nacional*, denominações de vias, títulos e Livro dos Heróis).
-5. **Anomalias na Cota Parlamentar (sobre os 802.861 lançamentos de 2023–2026):**
-   - **Pico mensal de combustível:** maior gasto em 1 mês convertido em tanques equivalentes de 50L (referência R$ 6,00/L = R$ 300/tanque).
-   - **Notas repetidas no mesmo dia/CNPJ (*salami slicing*):** ocorrências de `≥ 2` pagamentos positivos no mesmo dia para o mesmo fornecedor (excluindo passagens aéreas, telefonia, correios e táxi).
-   - **Sazonalidade pré-eleitoral:** razão entre a média mensal de *Divulgação da Atividade Parlamentar* em anos eleitorais (`2024`/`2026`) e anos não eleitorais (`2023`/`2025`).
-   - **Cruzamento Passageiro × Equipe do Gabinete:** cada bilhete aéreo é cruzado com o próprio parlamentar e com `pessoal-gabinete` **do mesmo ano** da passagem, com alerta multi-ano clicável.
-   - **Enriquecimento Receita Federal (CNPJs / QSA via BrasilAPI):** consulta sob demanda (com cache em disco) da data de abertura, situação cadastral, capital social, CNAE principal e **quadro societário** de qualquer fornecedor CNPJ, sinalizando empresas abertas na 57ª legislatura, situação irregular ou coincidência de sobrenome com o deputado pagador.
+   - **Fórmula:** $HHI = \sum_{i} \left(\frac{v_i}{\text{Total}}\right)^2 \times 10000$ (escala de `0` a `10.000`; selo exibido a partir de **`2.500`**).
+   - **Recorte:** calculado apenas para deputados com **`≥ 365 dias em exercício`** **e** **`≥ R$ 300.000` gastos** na Cota Parlamentar (2023–2026), evitando distorção por amostra pequena em suplentes ou parlamentares com baixo uso da cota.
+   - **Limitação:** contratos regulares com fornecedor único (locação de veículos, escritório de apoio ou divulgação) elevam o HHI sem implicar irregularidade.
+2. **Gasto Relativo à Própria UF:**
+   - **Fórmula:** gasto diário em exercício (`gastoTotalCeap / diasEmExercicio`) comparado à **mediana da própria UF** (`≥ +15%` exibe **`+X% UF`**; `≤ −35%` exibe **`Economia UF`**).
+   - **Recorte:** deputados com **`≥ 365 dias ativos`** na 57ª Legislatura.
+   - **Limitação:** diferenças de agenda, deslocamento pelo interior do estado ou despesas custeadas fora da cota não são refletidas nos dados.
+3. **Presença em Votações Nominais:**
+   - **Fórmula:** votos nominais registrados divididos pelas votações nominais ocorridas durante os intervalos ativos do deputado, reconstruídos a partir de `/deputados/{id}/historico`.
+   - **Recorte:** 57ª Legislatura, descontando períodos fora como Ministro ou Secretário de Estado e posses tardias; selos exibidos apenas com `≥ 50` votações no período (`< 50%` marca **`Baixa presença`**; `≥ 85%` marca **`Alta presença`**).
+   - **Limitação:** não contabiliza votações simbólicas, trabalho em comissões, audiências públicas ou missões oficiais.
+4. **Atuação Legislativa, Autoria Principal e Coautoria:**
+   - **Fórmula:** contagem de proposições separando votações nominais de **Mérito** das **Procedimentais** (requerimentos, destaques, emendas e adiamentos — ~96% das rejeições nominais ligadas via `SOBRE`), **autoria principal** (`ordemAssinatura = 1`) de **coautoria** (`ordem > 1`) e projetos cuja ementa menciona homenagens/datas comemorativas.
+   - **Recorte:** proposições do tipo `PL`, `PLP`, `PEC`, `PDL` e `PRC` apresentadas em 2023–2026.
+   - **Limitação:** volume ou ordem de assinatura não mede impacto regulatório, atuação em relatorias ou articulação em comissões; PECs exigem ao menos 171 assinaturas e naturalmente elevam a contagem de coautorias.
+5. **Passagens Aéreas (Totais Agregados) e Cadastro de Empresas (CNPJ):**
+   - **Passagens:** trechos aéreos (`txtTrecho`, traduzidos de código IATA para Cidade/UF/País) e contagem agregada por categoria (**Parlamentar**, **Membros da equipe no ano** e **Outros registros**) obtidos dos arquivos oficiais `Ano-{ano}.csv.zip` (2023–2025) e de `pessoal-gabinete` do mesmo ano, sem exposição nominal de passageiros terceiros.
+   - **Limitação (passagens):** abreviações incomuns nos bilhetes ou assessores lotados em lideranças/comissões podem ser classificados em *Outros registros*; os trechos SIGEPA de 2026 ainda não estão consolidados no arquivo anual.
+   - **CNPJs (BrasilAPI / Receita Federal):** consulta sob demanda (com cache em disco apenas dos campos da pessoa jurídica) de situação cadastral, data de abertura, capital social, porte, CNAE principal e município/UF, sem exibir nem armazenar dados de sócios pessoas físicas.
 6. **Tratamento documentado de inconsistências conhecidas na API oficial:**
    - A API REST v2 `/deputados/{id}/despesas` ocasionalmente devolve `valorLiquido` com sinal negativo quando `valorDocumento > 0` e `valorGlosa = 0` (enquanto o CSV em lote e o portal oficial trazem positivo). A função `_valor_liquido_despesa()` normaliza esses casos preservando estornos reais (`valorDocumento <= 0`).
-   - Os trechos aéreos (`txtTrecho`) e passageiros (`txtPassageiro`) vêm dos arquivos em lote `Ano-{ano}.csv.zip` (mais de 153 mil passagens detalhadas em 2023–2025) com tradução automática de códigos IATA para Cidade/UF/País.
 
 Exemplos prontos para colar e executar no GraphiQL (http://localhost:8001/graphql):
 

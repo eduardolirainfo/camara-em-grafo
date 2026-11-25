@@ -207,12 +207,12 @@
         Fonte oficial: <a href="https://dadosabertos.camara.leg.br/" target="_blank" class="text-ink font-medium underline underline-offset-2 hover:text-signal">Dados Abertos da Câmara dos Deputados</a>.
       </div>
       <div class="font-mono text-[11px]">
-        Indicadores objetivos auditáveis · Sem notas subjetivas
+        Indicadores descritivos com fontes oficiais · Sem notas subjetivas
       </div>
     </div>
   </footer>
 
-  <!-- Modal de Metodologia Científica -->
+  <!-- Modal de Metodologia -->
   <div id="modal-metodologia"
        onclick="if(event.target === this) fecharMetodologia()"
        class="hidden fixed inset-0 z-50 bg-black/70 p-4 sm:p-6 flex items-center justify-center">
@@ -220,7 +220,7 @@
       <div class="flex items-start justify-between gap-4 p-4 sm:p-5 border-b-2 border-ink bg-paper">
         <div>
           <div class="micro">Transparência &amp; Critérios</div>
-          <h2 class="text-lg font-extrabold text-ink tracking-[-0.02em] mt-1">Metodologia dos Indicadores Objetivos</h2>
+          <h2 class="text-lg font-extrabold text-ink tracking-[-0.02em] mt-1">Metodologia dos Indicadores</h2>
         </div>
         <button type="button" onclick="fecharMetodologia()"
                 class="px-2.5 py-1 border border-ink bg-white hover:bg-signal hover:text-white hover:border-signal font-mono text-xs uppercase">
@@ -229,27 +229,27 @@
       </div>
       <div class="p-5 sm:p-6 overflow-y-auto space-y-4 text-xs sm:text-sm text-ink leading-relaxed">
         <p class="text-muted">
-          Seguindo boas práticas de Ciência Política e auditoria de dados públicos, esta plataforma <strong class="text-ink">não atribui estrelas nem nota única subjetiva</strong>. Cada selo representa um indicador matemático verificável:
+          Esta plataforma apresenta dados públicos oficiais de forma descritiva e <strong class="text-ink">não atribui notas subjetivas, estrelas ou juízos de irregularidade</strong>. Cada indicador abaixo traz fórmula, recorte e limitação:
         </p>
         <div class="border-l-2 border-signal pl-3.5 space-y-1">
           <div class="font-bold">1. Concentração de Fornecedores (Índice HHI)</div>
-          <p class="text-xs text-muted">Baseado no <em>Herfindahl-Hirschman Index</em> (0 a 10.000), usado por órgãos de auditoria e antitruste (CADE/DoJ). Aplicado apenas a deputados com <strong class="text-ink">≥ 365 dias em exercício e ≥ R$ 300 mil gastos</strong> (evitando viés de amostra pequena em suplentes ou parlamentares que quase não usam a cota). Acima de <strong class="text-ink num">2.500</strong> aciona o selo <strong>HHI</strong>.</p>
+          <p class="text-xs text-muted"><strong class="text-ink">Fórmula:</strong> soma dos quadrados das participações percentuais de cada CNPJ na CEAP (0 a 10.000; selo acima de <strong class="text-ink num">2.500</strong>). <strong class="text-ink">Recorte:</strong> calculado apenas para deputados com ≥ 365 dias em exercício e ≥ R$ 300 mil gastos (2023–2026). <strong class="text-ink">Limitação:</strong> contratos regulares de aluguel de veículo, escritório ou divulgação com fornecedor único elevam o HHI sem implicar irregularidade.</p>
         </div>
         <div class="border-l-2 border-ochre pl-3.5 space-y-1">
-          <div class="font-bold">2. Gasto Relativo à Própria UF (Normalização por Pares)</div>
-          <p class="text-xs text-muted">O teto da Cota Parlamentar varia por estado devido às distâncias aéreas. Para parlamentares com <strong class="text-ink">≥ 365 dias ativos</strong>, calculamos o gasto diário em exercício e comparamos com a <strong class="text-ink">mediana da sua própria UF</strong>: ≥ +15% acima marca <strong>+X% UF</strong>; ≤ −35% abaixo marca <strong>Economia UF</strong>.</p>
+          <div class="font-bold">2. Gasto Relativo à Própria UF</div>
+          <p class="text-xs text-muted"><strong class="text-ink">Fórmula:</strong> gasto diário em exercício (<code class="font-mono">gastoTotalCeap / diasEmExercicio</code>) dividido pela mediana da própria UF (selo <strong>+X% UF</strong> se ≥ +15%; <strong>Economia UF</strong> se ≤ −35%). <strong class="text-ink">Recorte:</strong> deputados com ≥ 365 dias ativos. <strong class="text-ink">Limitação:</strong> diferenças de agenda, base eleitoral no interior ou uso de recursos próprios não aparecem na cota.</p>
         </div>
         <div class="border-l-2 border-ink pl-3.5 space-y-1">
-          <div class="font-bold">3. Presença Efetiva em Plenário</div>
-          <p class="text-xs text-muted">Reconstruímos os intervalos exatos de <em>Entrada</em> e <em>Saída</em> no <code class="font-mono">/historico</code> oficial, descontando licenças como Ministro/Secretário e posses tardias. Abaixo de <strong class="text-ink num">50%</strong> marca <strong>Baixa presença</strong>; ≥ <strong class="text-ink num">85%</strong> marca <strong>Alta presença</strong>.</p>
+          <div class="font-bold">3. Presença em Votações Nominais</div>
+          <p class="text-xs text-muted"><strong class="text-ink">Fórmula:</strong> votos nominais registrados divididos pelas votações nominais ocorridas enquanto o deputado esteve em exercício (intervalos reconstruídos de <code class="font-mono">/historico</code>). <strong class="text-ink">Recorte:</strong> 57ª Legislatura, descontando licenças como Ministro/Secretário e posses tardias; selos com ≥ 50 votações no período (&lt; 50% ou ≥ 85%). <strong class="text-ink">Limitação:</strong> não inclui votações simbólicas, trabalho em comissões ou missões oficiais.</p>
         </div>
         <div class="border-l-2 border-civic pl-3.5 space-y-1">
-          <div class="font-bold">4. Efetividade Legislativa, Autor Principal ("Carona") e Projetos Simbólicos</div>
-          <p class="text-xs text-muted">Inspirado no <em>Legislative Effectiveness Score</em> (Volden &amp; Wiseman, 2014): separamos votações de <strong>mérito</strong> das procedimentais, distinguimos <strong>autor principal</strong> (<code class="font-mono">ordem = 1</code>) de coautorias ("carona"), e contamos projetos simbólicos (<em>Dia Nacional</em>, denominações e homenagens).</p>
+          <div class="font-bold">4. Atuação Legislativa, Autoria e Coautoria</div>
+          <p class="text-xs text-muted"><strong class="text-ink">Fórmula:</strong> contagem de projetos (<code class="font-mono">PL, PLP, PEC, PDL, PRC</code>) separando votações de <strong>mérito</strong> das procedimentais, <strong>autoria principal</strong> (<code class="font-mono">ordem = 1</code>) de <strong>coautoria</strong> (<code class="font-mono">ordem &gt; 1</code>) e projetos com ementa de homenagem/datas. <strong class="text-ink">Recorte:</strong> proposições apresentadas em 2023–2026. <strong class="text-ink">Limitação:</strong> não mede impacto regulatório, relatorias ou atuação em comissões.</p>
         </div>
         <div class="border-l-2 border-rule pl-3.5 space-y-1">
-          <div class="font-bold">5. Anomalias na Cota: Combustível, Notas Repetidas e Sazonalidade Eleitoral</div>
-          <p class="text-xs text-muted"><strong>Pico de combustível:</strong> maior mês dividido por R$ 300 (referência 50L × R$ 6,00/L). <strong>Notas repetidas:</strong> ≥ 2 pagamentos no mesmo dia ao mesmo CNPJ (excluindo passagens, telefonia, táxi e correios). <strong>Salto eleitoral:</strong> média mensal de Divulgação Parlamentar em anos eleitorais (2024/2026) vs. não eleitorais (2023/2025).</p>
+          <div class="font-bold">5. Passagens Aéreas e Dados Cadastrais de Fornecedores</div>
+          <p class="text-xs text-muted"><strong class="text-ink">Passagens:</strong> trechos (IATA) e totais agregados (parlamentar, equipe do gabinete no ano e outros registros) obtidos dos arquivos oficiais SIGEPA (2023–2025) e de Pessoal de Gabinete, sem exposição nominal de terceiros. <strong class="text-ink">Limitação:</strong> abreviações nos bilhetes ou assessores de liderança/comissão podem entrar em <em>Outros registros</em>. <strong class="text-ink">CNPJs:</strong> dados cadastrais da pessoa jurídica via Receita Federal/BrasilAPI (situação, abertura, CNAE, capital e município), sem dados de pessoas físicas.</p>
         </div>
       </div>
     </div>

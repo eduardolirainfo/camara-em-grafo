@@ -127,7 +127,14 @@ class _FakeFichaService(FichaDeputadoService):
             "total_ano": 1500.50,
             "mensal": [{"mes": 1, "sigla": "JAN", "valor": 1500.50}],
             "categorias": [{"tipo": "DIVULGAÇÃO", "valor": 1500.50, "percentual": 100.0}],
-            "top_fornecedores": [{"fornecedor": "Gráfica X", "valor": 1500.50}],
+            "top_fornecedores": [{"fornecedor": "Gráfica X", "cnpj": "12345678000199", "valor": 1500.50}],
+            "top_trechos": [],
+            "resumo_passageiros": {
+                "parlamentar": {"bilhetes": 2, "valor": 2400.0},
+                "equipe": {"bilhetes": 1, "valor": 900.0},
+                "outros": {"bilhetes": 0, "valor": 0.0},
+                "total_bilhetes": 3,
+            },
             "itens": [],
         }
 
@@ -144,7 +151,7 @@ class _FakeFichaService(FichaDeputadoService):
         ]
 
     async def obter_pessoal_gabinete(
-        self, dep_id: int, ano: int, nome_civil: str | None = None, busca: str | None = None
+        self, dep_id: int, ano: int, busca: str | None = None
     ) -> dict[str, Any]:
         itens = [
             {
@@ -154,8 +161,6 @@ class _FakeFichaService(FichaDeputadoService):
                 "periodo": "Desde 01/02/2023",
                 "ativo": True,
                 "url_remuneracao": "https://www.camara.leg.br/transparencia/recursos-humanos/remuneracao/abc",
-                "mesmo_sobrenome": False,
-                "sobrenomes_comuns": [],
             }
         ]
         if busca:
@@ -166,8 +171,23 @@ class _FakeFichaService(FichaDeputadoService):
             "exonerados": 0,
             "total": len(itens),
             "total_sem_filtro": 1,
-            "mesmo_sobrenome_qtd": 0,
             "itens": itens,
+        }
+
+    async def obter_dados_cnpj(self, cnpj: str) -> dict[str, Any]:
+        return {
+            "cnpj": cnpj,
+            "razao_social": "GRAFICA EXEMPLO LTDA",
+            "nome_fantasia": "GRAFICA X",
+            "situacao": "ATIVA",
+            "situacao_irregular": False,
+            "data_abertura": "2018-05-10",
+            "capital_social": 50000.0,
+            "porte": "ME",
+            "cnae": "Impressão de material publicitário",
+            "municipio": "SAO PAULO",
+            "uf": "SP",
+            "erro": None,
         }
 
     async def obter_atuacao(self, dep_id: int) -> dict[str, Any]:
@@ -202,10 +222,15 @@ def test_ui_pagina_inicial_e_ficha_completa(tmp_path: Path) -> None:
     r_desp = client.get("/ui/deputado/204501/tab/despesas?ano=2025")
     assert r_desp.status_code == 200
     assert "R$ 1.500,50" in r_desp.text
+    assert "Resumo de Passagens (2025)" in r_desp.text
+    assert "Fora da equipe" not in r_desp.text
 
     r_func = client.get("/ui/deputado/204501/tab/funcionarios")
     assert r_func.status_code == 200
     assert "MARIA EXEMPLO" in r_func.text
+    assert "Mesmo Sobrenome" not in r_func.text
+    assert "Gráfico salarial" not in r_func.text
+    assert "Portal da Câmara" in r_func.text
 
     r_func_todos = client.get("/ui/deputado/204501/tab/funcionarios?ano=todos&busca=MARIA")
     assert r_func_todos.status_code == 200
@@ -213,7 +238,18 @@ def test_ui_pagina_inicial_e_ficha_completa(tmp_path: Path) -> None:
 
     r_func_miss = client.get("/ui/deputado/204501/tab/funcionarios?ano=todos&busca=INEXISTENTE")
     assert r_func_miss.status_code == 200
-    assert "Nenhum vínculo localizado" in r_func_miss.text
+    assert "Nenhum registro encontrado" in r_func_miss.text
+
+    # Página salarial individual foi removida por privacidade
+    r_sal = client.get("/ui/funcionario/abc")
+    assert r_sal.status_code == 404
+
+    # Consulta CNPJ exibe apenas dados da empresa, sem sócios/QSA
+    r_cnpj = client.get("/ui/partials/cnpj/12345678000199")
+    assert r_cnpj.status_code == 200
+    assert "ATIVA" in r_cnpj.text
+    assert "Quadro Societário" not in r_cnpj.text
+    assert "Mesmo sobrenome" not in r_cnpj.text
 
     assert url_bandeira_uf("SP") is not None
     assert url_logo_partido("PT") == "https://www.camara.leg.br/internet/Deputado/img/partidos/PT.gif"
