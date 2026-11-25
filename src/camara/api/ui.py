@@ -308,7 +308,11 @@ def criar_ui_router(
         except _API_ERROS:
             erro_api = "Não foi possível consultar os detalhes extras na API da Câmara agora."
 
-        funcionarios = await ficha_service.obter_funcionarios(dep_id)
+        pessoal_atual = await ficha_service.obter_pessoal_gabinete(
+            dep_id,
+            ano=anos_ordenados[0],
+            nome_civil=str(detalhes.get("nomeCivil") or ""),
+        )
         aliancas = await repo.buscar_aliancas_deputado(dep_id)
         mapa_grupos = await _mapa_grupos(repo)
 
@@ -320,7 +324,7 @@ def criar_ui_router(
                 "mapa_grupos": mapa_grupos,
                 "detalhes": detalhes,
                 "erro_api": erro_api,
-                "total_funcionarios": len(funcionarios),
+                "total_funcionarios": pessoal_atual["ativos"],
                 "aliancas": aliancas,
             },
         )
