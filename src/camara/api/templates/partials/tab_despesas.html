@@ -260,6 +260,55 @@
     </div>
   </div>
 
+  <!-- Rotas Aéreas (Origem → Destino) e Passageiros (via CSV em lote da Câmara) -->
+  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+    <div class="bg-white border border-rule p-4">
+      <div class="flex items-center justify-between gap-2 pb-2.5 mb-3 border-b-2 border-ink">
+        <h3 class="text-sm font-bold text-ink">Trechos Aéreos (Origem → Destino)</h3>
+        <span class="micro">{{ despesas.get('total_voos_com_trecho') or 0 }} bilhete(s)</span>
+      </div>
+      {% if not despesas.get('top_trechos') %}
+      <p class="text-xs text-muted leading-relaxed">
+        Sem trechos detalhados registrados no arquivo em lote de {{ ano }}{% if ano == 2026 %} (em 2026 a Câmara ainda não consolidou os trechos SIGEPA no CSV anual — selecione <strong>2025</strong>, <strong>2024</strong> ou <strong>2023</strong> para ver origem/destino de todos os voos){% endif %}.
+      </p>
+      {% else %}
+      <div class="divide-y divide-rule text-xs">
+        {% for t in despesas.top_trechos %}
+        <div class="flex items-center justify-between py-2 gap-2">
+          <span class="font-mono font-semibold text-ink">{{ t.trecho }}</span>
+          <span class="num text-muted shrink-0">
+            <strong class="text-ink">{{ t.voos }}</strong> voo(s) · <strong class="text-civic">{{ t.valor|brl }}</strong>
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="bg-white border border-rule p-4">
+      <div class="flex items-center justify-between gap-2 pb-2.5 mb-3 border-b-2 border-ink">
+        <h3 class="text-sm font-bold text-ink">Passageiros nas Passagens</h3>
+        <span class="micro">Quem voou pela cota</span>
+      </div>
+      {% if not despesas.get('top_passageiros') %}
+      <p class="text-xs text-muted leading-relaxed">
+        Sem nomes de passageiros consolidados no arquivo em lote de {{ ano }}.
+      </p>
+      {% else %}
+      <div class="divide-y divide-rule text-xs">
+        {% for ps in despesas.top_passageiros %}
+        <div class="flex items-center justify-between py-2 gap-2">
+          <span class="text-ink truncate">{{ ps.passageiro }}</span>
+          <span class="num text-muted shrink-0">
+            <strong class="text-ink">{{ ps.voos }}</strong> bilhete(s) · <strong class="text-civic">{{ ps.valor|brl }}</strong>
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
   {% if despesas.itens %}
   <div class="bg-white border border-rule p-4 overflow-x-auto">
     <h3 class="text-sm font-bold text-ink pb-2.5 mb-3 border-b-2 border-ink">Notas Fiscais e Lançamentos (até 100 itens)</h3>
@@ -277,7 +326,15 @@
         {% for item in despesas.itens %}
         <tr class="hover:bg-paper/70">
           <td class="py-2 px-2 num text-muted whitespace-nowrap">{{ item.dataDocumento|data_br if item.dataDocumento else (item.mes ~ '/' ~ item.ano) }}</td>
-          <td class="py-2 px-2">{{ item.tipoDespesa }}</td>
+          <td class="py-2 px-2">
+            <div>{{ item.tipoDespesa }}</div>
+            {% if item.get('trecho') or item.get('passageiro') %}
+            <div class="font-mono text-[10px] text-ochre mt-0.5">
+              {% if item.get('trecho') %}Trecho: <strong>{{ item.trecho }}</strong>{% endif %}
+              {% if item.get('passageiro') %}{% if item.get('trecho') %} · {% endif %}Passageiro: {{ item.passageiro }}{% endif %}
+            </div>
+            {% endif %}
+          </td>
           <td class="py-2 px-2">{{ item.nomeFornecedor }}</td>
           <td class="py-2 px-2 text-right num font-semibold whitespace-nowrap">{{ item.valorLiquido|brl }}</td>
           <td class="py-2 px-2 text-right whitespace-nowrap font-mono">

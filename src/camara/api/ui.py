@@ -82,11 +82,33 @@ def criar_ui_router(
 
     @router.get("", response_class=HTMLResponse)
     @router.get("/", response_class=HTMLResponse)
-    async def pagina_inicial(request: Request) -> HTMLResponse:
+    async def pagina_inicial(
+        request: Request,
+        busca: str | None = None,
+        uf: str | None = None,
+        partido: str | None = None,
+        comunidade: str | None = None,
+        situacao: str | None = "em_exercicio",
+        ordenar: str = "nome",
+        offset: int = Query(default=0, ge=0),
+        limit: int = Query(default=24, ge=1, le=60),
+        painel: str = "deputados",
+    ) -> HTMLResponse:
         repo = obter_repo()
         resumo = await repo.resumo_geral_ui()
         mapa_grupos = {int(c["id"]): c for c in resumo.get("comunidades", [])}
-        inicial = await repo.buscar_deputados_ui(situacao="em_exercicio", offset=0, limit=24)
+        com_int = int(comunidade) if comunidade and comunidade.strip().isdigit() else None
+        sit_filtro = None if situacao in {None, "", "todos"} else situacao
+        inicial = await repo.buscar_deputados_ui(
+            busca=busca,
+            uf=uf,
+            partido=partido,
+            comunidade=com_int,
+            situacao=sit_filtro,
+            ordenar=ordenar,
+            offset=offset,
+            limit=limit,
+        )
         todos_deps = await repo.listar_todos_deputados_simples()
         return templates.TemplateResponse(
             request=request,
@@ -97,14 +119,15 @@ def criar_ui_router(
                 "ufs": sorted(UF_INFO.items()),
                 "deputados": inicial["itens"],
                 "total_filtrado": inicial["total"],
-                "busca": "",
-                "uf": "",
-                "partido": "",
-                "comunidade": "",
-                "situacao": "em_exercicio",
-                "ordenar": "nome",
-                "offset": 0,
-                "limit": 24,
+                "busca": busca or "",
+                "uf": (uf or "").upper(),
+                "partido": partido or "",
+                "comunidade": comunidade or "",
+                "situacao": "todos" if sit_filtro is None else sit_filtro,
+                "ordenar": ordenar,
+                "offset": offset,
+                "limit": limit,
+                "painel_inicial": painel if painel in {"deputados", "proposicoes", "caminho", "fornecedores"} else "deputados",
                 "todos_deps": todos_deps,
             },
         )
@@ -123,12 +146,13 @@ def criar_ui_router(
     ) -> HTMLResponse:
         repo = obter_repo()
         com_int = int(comunidade) if comunidade and comunidade.strip().isdigit() else None
+        sit_filtro = None if situacao in {None, "", "todos"} else situacao
         res = await repo.buscar_deputados_ui(
             busca=busca,
             uf=uf,
             partido=partido,
             comunidade=com_int,
-            situacao=situacao,
+            situacao=sit_filtro,
             ordenar=ordenar,
             offset=offset,
             limit=limit,
@@ -145,7 +169,7 @@ def criar_ui_router(
                 "uf": uf or "",
                 "partido": partido or "",
                 "comunidade": comunidade or "",
-                "situacao": situacao or "",
+                "situacao": "todos" if sit_filtro is None else sit_filtro,
                 "ordenar": ordenar,
                 "offset": offset,
                 "limit": limit,

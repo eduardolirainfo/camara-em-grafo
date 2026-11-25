@@ -3,9 +3,17 @@
 
 {% block content %}
 <div class="mb-5">
-  <a href="/ui" class="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.06em] text-muted hover:text-ink transition-colors">
+  <a id="voltar-explorador" href="/ui" class="inline-flex items-center gap-1.5 font-mono text-xs uppercase tracking-[0.06em] text-muted hover:text-ink transition-colors">
     ← Voltar ao explorador
   </a>
+  <script>
+    (function() {
+      const saved = sessionStorage.getItem('cg-last-explorer-url');
+      if (saved && saved.startsWith('/ui')) {
+        document.getElementById('voltar-explorador').setAttribute('href', saved);
+      }
+    })();
+  </script>
 </div>
 
 {% set status = detalhes.get("ultimoStatus") or {} %}

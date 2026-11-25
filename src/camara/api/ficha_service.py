@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import csv
 import html as html_lib
+import io
 import json
 import logging
 import re
 import unicodedata
+import zipfile
 from collections import defaultdict
 from pathlib import Path
 from typing import Any
@@ -165,6 +167,55 @@ class FichaDeputadoService:
         self.arquivos_base_url = arquivos_base_url.rstrip("/")
         self.user_agent = user_agent
         self._funcionarios_por_dep: dict[int, list[dict[str, Any]]] | None = None
+        self._voos_por_ano: dict[int, dict[int, list[dict[str, Any]]]] = {}
+        self._voo_por_doc: dict[int, dict[str, tuple[str, str]]] = {}
+
+    def _carregar_voos_ano(self, ano: int) -> None:
+        """Indexa trechos (origem/destino) e passageiros do CSV em lote Ano-{ano}.csv.zip."""
+        if ano in self._voos_por_ano:
+            return
+        zpath = self.cache_dir / "arquivos" / "cotas" / f"Ano-{ano}.csv.zip"
+        por_dep: dict[int, list[dict[str, Any]]] = defaultdict(list)
+        por_doc: dict[str, tuple[str, str]] = {}
+        if zpath.exists():
+            try:
+                with zipfile.ZipFile(zpath) as zf, zf.open(zf.namelist()[0]) as fh:
+                    for row in csv.DictReader(
+                        io.TextIOWrapper(fh, encoding="utf-8-sig"), delimiter=";"
+                    ):
+                        trecho = (row.get("txtTrecho") or "").strip().upper()
+                        passageiro = (row.get("txtPassageiro") or "").strip()
+                        if not trecho and not passageiro:
+                            continue
+                        dep_str = (row.get("ideCadastro") or "").strip()
+                        if not dep_str.isdigit():
+                            continue
+                        dep_id = int(dep_str)
+                        cod_doc = (row.get("ideDocumento") or "").strip()
+                        num_doc = (row.get("txtNumero") or "").strip()
+                        mes_str = (row.get("numMes") or "0").strip()
+                        mes_int = int(mes_str) if mes_str.isdigit() else 0
+                        try:
+                            val = float((row.get("vlrLiquido") or "0").replace(",", "."))
+                        except ValueError:
+                            val = 0.0
+                        if cod_doc:
+                            por_doc[cod_doc] = (trecho, passageiro)
+                        if num_doc:
+                            por_doc[f"num:{dep_id}:{num_doc}"] = (trecho, passageiro)
+                        por_dep[dep_id].append(
+                            {
+                                "mes": mes_int,
+                                "trecho": trecho,
+                                "passageiro": passageiro,
+                                "valor": val,
+                                "data": (row.get("datEmissao") or "")[:10],
+                            }
+                        )
+            except (OSError, zipfile.BadZipFile) as exc:
+                logger.warning("Não foi possível ler trechos de Ano-%s.csv.zip: %s", ano, exc)
+        self._voos_por_ano[ano] = dict(por_dep)
+        self._voo_por_doc[ano] = por_doc
 
     def _criar_cliente(self) -> CamaraAPIClient:
         return CamaraAPIClient(
@@ -210,6 +261,14 @@ class FichaDeputadoService:
                 itens=100,
             )
 
+        self._carregar_voos_ano(ano)
+        mapa_doc = self._voo_por_doc.get(ano, {})
+        voos_dep = [
+            v
+            for v in self._voos_por_ano.get(ano, {}).get(dep_id, [])
+            if mes is None or v["mes"] == mes
+        ]
+
         siglas_mes = [
             "JAN", "FEV", "MAR", "ABR", "MAI", "JUN",
             "JUL", "AGO", "SET", "OUT", "NOV", "DEZ",
@@ -218,7 +277,17 @@ class FichaDeputadoService:
         itens_normalizados: list[dict[str, Any]] = []
         for d in itens_ano:
             valor = _valor_liquido_despesa(d)
-            item_norm = {**d, "valorLiquido": valor}
+            cod_doc = str(d.get("codDocumento") or "").strip()
+            num_doc = str(d.get("numDocumento") or "").strip()
+            trecho, passageiro = mapa_doc.get(
+                cod_doc, mapa_doc.get(f"num:{dep_id}:{num_doc}", ("", ""))
+            )
+            item_norm = {
+                **d,
+                "valorLiquido": valor,
+                "trecho": trecho,
+                "passageiro": passageiro,
+            }
             itens_normalizados.append(item_norm)
             m = int(d.get("mes") or 0)
             if 1 <= m <= 12:
@@ -263,6 +332,35 @@ class FichaDeputadoService:
             reverse=True,
         )[:10]
 
+        por_trecho_qtd: dict[str, int] = defaultdict(int)
+        por_trecho_val: dict[str, float] = defaultdict(float)
+        por_pass_qtd: dict[str, int] = defaultdict(int)
+        por_pass_val: dict[str, float] = defaultdict(float)
+        for v in voos_dep:
+            if v["trecho"]:
+                por_trecho_qtd[v["trecho"]] += 1
+                por_trecho_val[v["trecho"]] += v["valor"]
+            if v["passageiro"]:
+                por_pass_qtd[v["passageiro"]] += 1
+                por_pass_val[v["passageiro"]] += v["valor"]
+
+        top_trechos = sorted(
+            [
+                {"trecho": k, "voos": por_trecho_qtd[k], "valor": round(por_trecho_val[k], 2)}
+                for k in por_trecho_qtd
+            ],
+            key=lambda x: (x["voos"], x["valor"]),
+            reverse=True,
+        )[:12]
+        top_passageiros = sorted(
+            [
+                {"passageiro": k, "voos": por_pass_qtd[k], "valor": round(por_pass_val[k], 2)}
+                for k in por_pass_qtd
+            ],
+            key=lambda x: (x["voos"], x["valor"]),
+            reverse=True,
+        )[:10]
+
         return {
             "ano": ano,
             "mes": mes,
@@ -272,6 +370,9 @@ class FichaDeputadoService:
             "mensal": mensal,
             "categorias": categorias,
             "top_fornecedores": top_fornecedores,
+            "top_trechos": top_trechos,
+            "top_passageiros": top_passageiros,
+            "total_voos_com_trecho": sum(por_trecho_qtd.values()),
             "itens": itens[:100],
         }
 

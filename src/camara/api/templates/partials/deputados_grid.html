@@ -1,4 +1,4 @@
-<div class="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-muted mb-3">
+<div id="deputados-grid-meta" data-offset="{{ offset }}" class="flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-muted mb-3">
   <span>Mostrando <strong class="text-ink">{{ deputados|length }}</strong> de <strong class="text-ink">{{ total_filtrado }}</strong> deputados</span>
   {% if total_filtrado > limit %}
   <span>Página {{ (offset // limit) + 1 }} / {{ ((total_filtrado - 1) // limit) + 1 }}</span>

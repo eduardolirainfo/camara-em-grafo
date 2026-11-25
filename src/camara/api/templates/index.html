@@ -77,15 +77,15 @@
         class="bg-white border border-rule p-4 mb-5 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-3">
     <div class="lg:col-span-2">
       <label class="micro block mb-1.5">Buscar por nome</label>
-      <input type="text" name="busca" placeholder="Ex.: Silva, Maria, Delegado..."
+      <input type="text" name="busca" value="{{ busca }}" placeholder="Ex.: Silva, Maria, Delegado..."
              class="w-full min-h-[40px] bg-paper border border-rule px-3 py-2 text-sm text-ink placeholder-muted focus:outline-none focus:border-ink focus:bg-white transition-colors" />
     </div>
     <div>
       <label class="micro block mb-1.5">Situação</label>
       <select name="situacao" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
-        <option value="em_exercicio" selected>Apenas em exercício</option>
-        <option value="">Todos (57ª Leg.)</option>
-        <option value="fora_exercicio">Fora de exercício</option>
+        <option value="em_exercicio" {% if situacao == 'em_exercicio' %}selected{% endif %}>Apenas em exercício</option>
+        <option value="todos" {% if situacao == 'todos' %}selected{% endif %}>Todos (57ª Leg.)</option>
+        <option value="fora_exercicio" {% if situacao == 'fora_exercicio' %}selected{% endif %}>Fora de exercício</option>
       </select>
     </div>
     <div>
@@ -93,7 +93,7 @@
       <select name="uf" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
         <option value="">Todas as 27 UFs</option>
         {% for sigla, info in ufs %}
-        <option value="{{ sigla }}">{{ sigla }} — {{ info.nome }}</option>
+        <option value="{{ sigla }}" {% if uf == sigla %}selected{% endif %}>{{ sigla }} — {{ info.nome }}</option>
         {% endfor %}
       </select>
     </div>
@@ -102,7 +102,7 @@
       <select name="partido" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
         <option value="">Todos ({{ resumo.partidos|length }})</option>
         {% for p in resumo.partidos %}
-        <option value="{{ p.sigla }}">{{ p.sigla }}</option>
+        <option value="{{ p.sigla }}" {% if partido == p.sigla %}selected{% endif %}>{{ p.sigla }}</option>
         {% endfor %}
       </select>
     </div>
@@ -113,29 +113,29 @@
       <select name="comunidade" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
         <option value="">Todos os grupos</option>
         {% for c in resumo.comunidades %}
-        <option value="{{ c.id }}">{{ c.rotulo }} · {{ c.total }}</option>
+        <option value="{{ c.id }}" {% if comunidade == (c.id|string) %}selected{% endif %}>{{ c.rotulo }} · {{ c.total }}</option>
         {% endfor %}
       </select>
     </div>
     <div>
       <label class="micro block mb-1.5">Ordenar por</label>
       <select name="ordenar" class="w-full min-h-[40px] bg-paper border border-rule px-2.5 py-2 text-sm text-ink focus:outline-none focus:border-ink focus:bg-white transition-colors">
-        <option value="nome">Nome (A–Z)</option>
-        <option value="gastos_desc">Maior gasto na Cota (R$)</option>
-        <option value="viagens_desc">Maior gasto com viagens (R$)</option>
-        <option value="divulgacao_desc">Maior gasto com divulgação (R$)</option>
-        <option value="aeronaves_desc">Maior gasto com aeronaves (R$)</option>
-        <option value="consultorias_desc">Maior gasto com consultorias (R$)</option>
-        <option value="hhi_desc">Maior concentração HHI (fornecedores)</option>
-        <option value="gasto_uf_desc">Mais acima da mediana da UF</option>
-        <option value="concentracao_desc">Maior concentração em 1 empresa (%)</option>
-        <option value="custo_voto_desc">Maior custo por voto (R$/voto)</option>
-        <option value="presenca_asc">Menor presença em votações (%)</option>
-        <option value="divergencia">Mais contra o próprio partido (%)</option>
-        <option value="funcionarios_desc">Maior equipe no gabinete</option>
-        <option value="trocas">Mais trocas de partido</option>
-        <option value="aprovados_desc">Mais projetos aprovados em plenário</option>
-        <option value="presenca_desc">Maior presença em votações (%)</option>
+        <option value="nome" {% if ordenar == 'nome' %}selected{% endif %}>Nome (A–Z)</option>
+        <option value="gastos_desc" {% if ordenar == 'gastos_desc' %}selected{% endif %}>Maior gasto na Cota (R$)</option>
+        <option value="viagens_desc" {% if ordenar == 'viagens_desc' %}selected{% endif %}>Maior gasto com viagens (R$)</option>
+        <option value="divulgacao_desc" {% if ordenar == 'divulgacao_desc' %}selected{% endif %}>Maior gasto com divulgação (R$)</option>
+        <option value="aeronaves_desc" {% if ordenar == 'aeronaves_desc' %}selected{% endif %}>Maior gasto com aeronaves (R$)</option>
+        <option value="consultorias_desc" {% if ordenar == 'consultorias_desc' %}selected{% endif %}>Maior gasto com consultorias (R$)</option>
+        <option value="hhi_desc" {% if ordenar == 'hhi_desc' %}selected{% endif %}>Maior concentração HHI (fornecedores)</option>
+        <option value="gasto_uf_desc" {% if ordenar == 'gasto_uf_desc' %}selected{% endif %}>Mais acima da mediana da UF</option>
+        <option value="concentracao_desc" {% if ordenar == 'concentracao_desc' %}selected{% endif %}>Maior concentração em 1 empresa (%)</option>
+        <option value="custo_voto_desc" {% if ordenar == 'custo_voto_desc' %}selected{% endif %}>Maior custo por voto (R$/voto)</option>
+        <option value="presenca_asc" {% if ordenar == 'presenca_asc' %}selected{% endif %}>Menor presença em votações (%)</option>
+        <option value="divergencia" {% if ordenar == 'divergencia' %}selected{% endif %}>Mais contra o próprio partido (%)</option>
+        <option value="funcionarios_desc" {% if ordenar == 'funcionarios_desc' %}selected{% endif %}>Maior equipe no gabinete</option>
+        <option value="trocas" {% if ordenar == 'trocas' %}selected{% endif %}>Mais trocas de partido</option>
+        <option value="aprovados_desc" {% if ordenar == 'aprovados_desc' %}selected{% endif %}>Mais projetos aprovados em plenário</option>
+        <option value="presenca_desc" {% if ordenar == 'presenca_desc' %}selected{% endif %}>Maior presença em votações (%)</option>
       </select>
     </div>
   </form>
@@ -261,7 +261,32 @@
 </section>
 
 <script>
-function mostrarPainel(nome) {
+let painelAtual = '{{ painel_inicial or "deputados" }}';
+
+function salvarEstadoExplorador(offsetOverride) {
+  const params = new URLSearchParams();
+  if (painelAtual && painelAtual !== 'deputados') params.set('painel', painelAtual);
+  const form = document.getElementById('filtros-deputados');
+  if (form) {
+    const fd = new FormData(form);
+    for (const [k, v] of fd.entries()) {
+      const val = String(v || '').trim();
+      if (!val) continue;
+      if (k === 'situacao' && val === 'em_exercicio') continue;
+      if (k === 'ordenar' && val === 'nome') continue;
+      params.set(k, val);
+    }
+  }
+  const off = typeof offsetOverride === 'number' ? offsetOverride : Number(document.getElementById('deputados-grid-meta')?.dataset?.offset || 0);
+  if (off > 0) params.set('offset', String(off));
+  const qs = params.toString();
+  const novaUrl = qs ? ('/ui?' + qs) : '/ui';
+  window.history.replaceState(null, '', novaUrl);
+  sessionStorage.setItem('cg-last-explorer-url', novaUrl);
+}
+
+function mostrarPainel(nome, salvar = true) {
+  painelAtual = nome;
   ['deputados', 'proposicoes', 'caminho', 'fornecedores'].forEach(p => {
     document.getElementById('painel-' + p).classList.toggle('hidden', p !== nome);
     const btn = document.getElementById('btn-' + p);
@@ -271,6 +296,23 @@ function mostrarPainel(nome) {
       btn.className = 'whitespace-nowrap px-4 py-3 text-xs font-mono uppercase tracking-[0.06em] font-medium bg-white text-ink hover:bg-tint border-r border-t border-rule transition-colors';
     }
   });
+  if (nome === 'fornecedores' && document.getElementById('fornecedores-resultado')?.textContent?.includes('Carregando')) {
+    htmx.trigger('#btn-fornecedores', 'click');
+  }
+  if (salvar) salvarEstadoExplorador();
 }
+
+document.addEventListener('DOMContentLoaded', () => {
+  if (painelAtual && painelAtual !== 'deputados') {
+    mostrarPainel(painelAtual, false);
+  }
+  sessionStorage.setItem('cg-last-explorer-url', window.location.pathname + window.location.search);
+});
+
+document.body.addEventListener('htmx:afterSwap', (e) => {
+  if (e.detail && e.detail.target && e.detail.target.id === 'deputados-container') {
+    salvarEstadoExplorador();
+  }
+});
 </script>
 {% endblock %}
