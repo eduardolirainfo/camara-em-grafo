@@ -181,9 +181,15 @@ Seguindo boas práticas de Ciência Política e auditoria de dados públicos, a 
 3. **Presença Efetiva em Plenário (ajustada por intervalos reais de mandato):**
    - Reconstruímos os intervalos exatos de `Entrada` (posse/reassunção) e `Saída` (licença/afastamento/renúncia) de cada deputado a partir de `/deputados/{id}/historico`, descontando integralmente períodos fora como Ministro ou Secretário de Estado e posses tardias de suplentes.
    - `< 50%` (com `≥ 50` votações no período ativo) aciona **`Baixa presença`**; `≥ 85%` aciona **`Alta presença`**.
-4. **Efetividade Legislativa (Funil de Projetos — Volden & Wiseman, 2014):**
-   - Em vez de premiar volume bruto de projetos apresentados, separamos votações nominais de **Mérito** das votações **Procedimentais** (requerimentos de retirada de pauta, destaques, emendas e adiamentos — que representam ~96% das rejeições nominais ligadas a projetos via `SOBRE`), exibindo sempre a descrição oficial da votação.
-5. **Tratamento documentado de inconsistências conhecidas na API oficial:**
+4. **Efetividade Legislativa, Autor Principal ("Carona") e Projetos Simbólicos (Volden & Wiseman, 2014):**
+   - Separamos votações nominais de **Mérito** das votações **Procedimentais** (requerimentos de retirada de pauta, destaques, emendas e adiamentos — ~96% das rejeições nominais ligadas via `SOBRE`), exibindo sempre a descrição oficial da votação.
+   - Separamos **autor principal** (`ordemAssinatura = 1`) de **coautorias ("efeito carona")** (`ordem > 1`) e contabilizamos **projetos simbólicos/homenagens** (*Dia Nacional*, denominações de vias, títulos e Livro dos Heróis).
+5. **Anomalias na Cota Parlamentar (sobre os 802.861 lançamentos de 2023–2026):**
+   - **Pico mensal de combustível:** maior gasto em 1 mês convertido em tanques equivalentes de 50L (referência R$ 6,00/L = R$ 300/tanque).
+   - **Notas repetidas no mesmo dia/CNPJ (*salami slicing*):** ocorrências de `≥ 2` pagamentos positivos no mesmo dia para o mesmo fornecedor (excluindo passagens aéreas, telefonia, correios e táxi).
+   - **Sazonalidade pré-eleitoral:** razão entre a média mensal de *Divulgação da Atividade Parlamentar* em anos eleitorais (`2024`/`2026`) e anos não eleitorais (`2023`/`2025`).
+   - **Cruzamento Passageiro × Equipe do Gabinete:** cada bilhete aéreo é cruzado com o próprio parlamentar e com `pessoal-gabinete` **do mesmo ano** da passagem, com alerta multi-ano clicável.
+6. **Tratamento documentado de inconsistências conhecidas na API oficial:**
    - A API REST v2 `/deputados/{id}/despesas` ocasionalmente devolve `valorLiquido` com sinal negativo quando `valorDocumento > 0` e `valorGlosa = 0` (enquanto o CSV em lote e o portal oficial trazem positivo). A função `_valor_liquido_despesa()` normaliza esses casos preservando estornos reais (`valorDocumento <= 0`).
    - Os trechos aéreos (`txtTrecho`) e passageiros (`txtPassageiro`) vêm dos arquivos em lote `Ano-{ano}.csv.zip` (mais de 153 mil passagens detalhadas em 2023–2025) com tradução automática de códigos IATA para Cidade/UF/País.
 

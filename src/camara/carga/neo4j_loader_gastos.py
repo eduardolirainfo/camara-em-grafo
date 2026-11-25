@@ -348,25 +348,155 @@ MATCH (d:Deputado {id: row.id})
 SET d.hhiFornecedores = row.hhiFornecedores,
     d.gastoVsMedianaUf = row.gastoVsMedianaUf,
     d.projetosVotados = row.projetosVotados,
-    d.projetosAprovados = row.projetosAprovados
+    d.projetosAprovados = row.projetosAprovados,
+    d.projetosAutorPrincipal = row.projetosAutorPrincipal,
+    d.projetosCoautor = row.projetosCoautor,
+    d.projetosHomenagem = row.projetosHomenagem,
+    d.notasFracionadas = row.notasFracionadas,
+    d.notasFracionadasValor = row.notasFracionadasValor,
+    d.picoCombustivelMes = row.picoCombustivelMes,
+    d.picoCombustivelMesRef = row.picoCombustivelMesRef,
+    d.picoCombustivelTanques = row.picoCombustivelTanques,
+    d.saltoDivulgacaoEleitoral = row.saltoDivulgacaoEleitoral
 """
 
+_REGEX_HOMENAGEM = re.compile(
+    r"\b(dia nacional|semana nacional|m[eê]s nacional|denomina\b|denominar\b|"
+    r"livro dos her[oó]is|capital nacional|t[ií]tulo de|patrono|patrona|"
+    r"homenag|confere o t[ií]tulo|institui o dia|institui a semana|institui o m[eê]s)\b",
+    flags=re.IGNORECASE,
+)
+_PRECO_REF_TANQUE_50L = 300.0  # Referência: 50 litros × R$ 6,00/L
 
-def atualizar_indicadores_cientificos(driver: Driver) -> dict[str, int]:
+
+def _calcular_anomalias_ceap_csv(cache_dir: Path | None) -> dict[int, dict[str, Any]]:
+    """Extrai métricas objetivas dos ZIPs CEAP (2023–2026):
+    - Fracionamento: múltiplos pagamentos positivos no mesmo dia ao mesmo CNPJ (excluindo passagens/telefonia/táxi/correios)
+    - Pico mensal de combustível (R$, MM/AAAA e tanques equivalentes de 50L)
+    - Sazonalidade pré-eleitoral: média mensal de divulgação em anos eleitorais (2024/2026) vs. não eleitorais (2023/2025)
+    """
+    if cache_dir is None:
+        return {}
+    cotas_dir = Path(cache_dir) / "arquivos" / "cotas"
+    if not cotas_dir.exists():
+        return {}
+
+    # (dep_id, cnpj, data) -> list[val]
+    pagos_mesmo_dia: dict[tuple[int, str, str], list[float]] = defaultdict(list)
+    # dep_id -> {(ano, mes): valor_combustivel}
+    comb_mes: dict[int, dict[tuple[int, int], float]] = defaultdict(lambda: defaultdict(float))
+    # dep_id -> {ano: {mes: valor_divulgacao}}
+    div_ano_mes: dict[int, dict[int, dict[int, float]]] = defaultdict(
+        lambda: defaultdict(lambda: defaultdict(float))
+    )
+
+    for zpath in sorted(cotas_dir.glob("Ano-*.csv.zip")):
+        try:
+            with zipfile.ZipFile(zpath) as zf, zf.open(zf.namelist()[0]) as fh:
+                for row in csv.DictReader(
+                    io.TextIOWrapper(fh, encoding="utf-8-sig"), delimiter=";"
+                ):
+                    dep_str = (row.get("ideCadastro") or "").strip()
+                    if not dep_str.isdigit():
+                        continue
+                    dep_id = int(dep_str)
+                    val = _to_float(row.get("vlrLiquido"))
+                    if val <= 0:
+                        continue
+                    desc = (row.get("txtDescricao") or "").strip().upper()
+                    ano_s = (row.get("numAno") or "").strip()
+                    mes_s = (row.get("numMes") or "").strip()
+                    ano_i = int(ano_s) if ano_s.isdigit() else 0
+                    mes_i = int(mes_s) if mes_s.isdigit() else 0
+
+                    if "COMBUST" in desc and ano_i and 1 <= mes_i <= 12:
+                        comb_mes[dep_id][(ano_i, mes_i)] += val
+
+                    if desc == CATEGORIA_DIVULGACAO and ano_i and 1 <= mes_i <= 12:
+                        div_ano_mes[dep_id][ano_i][mes_i] += val
+
+                    cnpj = _normalizar_cnpj(row.get("txtCNPJCPF"))
+                    data_em = (row.get("datEmissao") or "")[:10]
+                    ignorar_frac = any(
+                        k in desc
+                        for k in ("PASSAGEM", "TELEFON", "POSTAL", "TÁXI", "TAXI", "PEDÁGIO")
+                    )
+                    if not ignorar_frac and len(cnpj) in {11, 14} and len(data_em) == 10:
+                        pagos_mesmo_dia[(dep_id, cnpj, data_em)].append(val)
+        except (OSError, zipfile.BadZipFile) as exc:
+            logger.warning("Erro ao ler %s para anomalias CEAP: %s", zpath, exc)
+
+    frac_qtd: dict[int, int] = defaultdict(int)
+    frac_val: dict[int, float] = defaultdict(float)
+    for (dep_id, _cnpj, _dt), vals in pagos_mesmo_dia.items():
+        if len(vals) >= 2:
+            frac_qtd[dep_id] += 1
+            frac_val[dep_id] += sum(vals)
+
+    todos_ids = set(frac_qtd.keys()) | set(comb_mes.keys()) | set(div_ano_mes.keys())
+    resultado: dict[int, dict[str, Any]] = {}
+    for dep_id in todos_ids:
+        pico_val = 0.0
+        pico_ref = ""
+        for (a, m), v in comb_mes.get(dep_id, {}).items():
+            if v > pico_val:
+                pico_val = v
+                pico_ref = f"{m:02d}/{a}"
+
+        # Sazonalidade pré-eleitoral: média mensal em anos pares (2024/2026) vs. ímpares (2023/2025)
+        anos_div = div_ano_mes.get(dep_id, {})
+        vals_eleit = [
+            v for a, mp in anos_div.items() if a % 2 == 0 for v in mp.values() if v > 0
+        ]
+        vals_nao_eleit = [
+            v for a, mp in anos_div.items() if a % 2 == 1 for v in mp.values() if v > 0
+        ]
+        salto = None
+        if (
+            len(vals_eleit) >= 3
+            and len(vals_nao_eleit) >= 3
+            and sum(vals_eleit) >= 10_000.0
+            and sum(vals_nao_eleit) >= 10_000.0
+        ):
+            med_e = sum(vals_eleit) / len(vals_eleit)
+            med_n = sum(vals_nao_eleit) / len(vals_nao_eleit)
+            if med_n > 0:
+                salto = round(med_e / med_n, 4)
+
+        resultado[dep_id] = {
+            "notasFracionadas": int(frac_qtd.get(dep_id, 0)),
+            "notasFracionadasValor": round(frac_val.get(dep_id, 0.0), 2),
+            "picoCombustivelMes": round(pico_val, 2),
+            "picoCombustivelMesRef": pico_ref,
+            "picoCombustivelTanques": round(pico_val / _PRECO_REF_TANQUE_50L, 1) if pico_val > 0 else 0.0,
+            "saltoDivulgacaoEleitoral": salto,
+        }
+    return resultado
+
+
+def atualizar_indicadores_cientificos(
+    driver: Driver, cache_dir: Path | None = None
+) -> dict[str, int]:
     """Calcula e grava indicadores objetivos normalizados no Neo4j:
     - hhiFornecedores: Índice Herfindahl-Hirschman (0–10000) de concentração de fornecedores.
     - gastoVsMedianaUf: razão entre o gasto diário do deputado e a mediana da própria UF.
-    - projetosVotados / projetosAprovados: funil de efetividade legislativa.
+    - projetosVotados / projetosAprovados / projetosAutorPrincipal / projetosCoautor / projetosHomenagem.
+    - notasFracionadas / picoCombustivelMes / picoCombustivelTanques / saltoDivulgacaoEleitoral.
     """
+    anomalias_ceap = _calcular_anomalias_ceap_csv(cache_dir)
+
     with driver.session() as session:
         deps = session.run(
             """
             MATCH (d:Deputado)
             OPTIONAL MATCH (d)-[r:PAGOU]->(:Fornecedor)
             WITH d, collect(r.total) AS valoresPagos
-            OPTIONAL MATCH (d)-[:AUTOR_DE]->(p:Proposicao)<-[:SOBRE]-(v:Votacao)
+            OPTIONAL MATCH (d)-[a:AUTOR_DE]->(p:Proposicao)
             WITH d, valoresPagos,
-                 count(DISTINCT p) AS projetosVotados,
+                 collect(DISTINCT {id: p.id, ordem: coalesce(a.ordem, 99), ementa: coalesce(p.ementa, '')}) AS propsAutor
+            OPTIONAL MATCH (d)-[:AUTOR_DE]->(pv:Proposicao)<-[:SOBRE]-(v:Votacao)
+            WITH d, valoresPagos, propsAutor,
+                 count(DISTINCT pv) AS projetosVotados,
                  count(DISTINCT CASE
                    WHEN v IS NOT NULL AND v.aprovacao = true AND NOT (
                      toLower(coalesce(v.descricao, '')) CONTAINS 'requerimento'
@@ -377,12 +507,13 @@ def atualizar_indicadores_cientificos(driver: Driver) -> dict[str, int]:
                      OR toLower(coalesce(v.descricao, '')) CONTAINS 'preferência'
                      OR toLower(coalesce(v.descricao, '')) CONTAINS 'inversão'
                      OR toLower(coalesce(v.descricao, '')) CONTAINS 'encerramento da discussão'
-                   ) THEN p END) AS projetosAprovados
+                   ) THEN pv END) AS projetosAprovados
             RETURN d.id AS id,
                    d.uf AS uf,
                    coalesce(d.gastoTotalCeap, 0.0) AS gastoTotalCeap,
                    coalesce(d.diasEmExercicio, 0) AS diasEmExercicio,
                    valoresPagos,
+                   propsAutor,
                    projetosVotados,
                    projetosAprovados
             """
@@ -427,6 +558,20 @@ def atualizar_indicadores_cientificos(driver: Driver) -> dict[str, int]:
         if ratio_uf is not None and ratio_uf >= 1.25:
             acima_uf += 1
 
+        props_validos = [p for p in (row["propsAutor"] or []) if p and p.get("id") is not None]
+        # Deduplica por prop id mantendo a menor ordem de assinatura do deputado naquele projeto
+        ordem_por_prop: dict[int, tuple[int, str]] = {}
+        for p in props_validos:
+            pid = int(p["id"])
+            ord_val = int(p.get("ordem") or 99)
+            em = str(p.get("ementa") or "")
+            if pid not in ordem_por_prop or ord_val < ordem_por_prop[pid][0]:
+                ordem_por_prop[pid] = (ord_val, em)
+        autor_principal = sum(1 for ord_v, _ in ordem_por_prop.values() if ord_v == 1)
+        coautor = sum(1 for ord_v, _ in ordem_por_prop.values() if ord_v > 1)
+        homenagem = sum(1 for _, em in ordem_por_prop.values() if _REGEX_HOMENAGEM.search(em))
+
+        anom = anomalias_ceap.get(dep_id, {})
         linhas.append(
             {
                 "id": dep_id,
@@ -434,6 +579,15 @@ def atualizar_indicadores_cientificos(driver: Driver) -> dict[str, int]:
                 "gastoVsMedianaUf": ratio_uf,
                 "projetosVotados": int(row["projetosVotados"] or 0),
                 "projetosAprovados": int(row["projetosAprovados"] or 0),
+                "projetosAutorPrincipal": autor_principal,
+                "projetosCoautor": coautor,
+                "projetosHomenagem": homenagem,
+                "notasFracionadas": int(anom.get("notasFracionadas", 0)),
+                "notasFracionadasValor": float(anom.get("notasFracionadasValor", 0.0)),
+                "picoCombustivelMes": float(anom.get("picoCombustivelMes", 0.0)),
+                "picoCombustivelMesRef": str(anom.get("picoCombustivelMesRef", "")),
+                "picoCombustivelTanques": float(anom.get("picoCombustivelTanques", 0.0)),
+                "saltoDivulgacaoEleitoral": anom.get("saltoDivulgacaoEleitoral"),
             }
         )
 
@@ -632,7 +786,7 @@ def carregar_gastos_e_equipe(
         cache_dir=cache_dir,
         user_agent=user_agent,
     )
-    atualizar_indicadores_cientificos(driver=driver)
+    atualizar_indicadores_cientificos(driver=driver, cache_dir=cache_dir)
 
     return ResumoCargaGastos(
         anos=anos,
