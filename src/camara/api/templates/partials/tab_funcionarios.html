@@ -41,7 +41,7 @@
         <input type="text"
                name="busca"
                value="{{ busca }}"
-               placeholder="Buscar nome ou sobrenome em todos os anos (ex.: Franceschetto, Silva)..."
+               placeholder="Buscar funcionário por nome em todos os anos..."
                class="w-full px-3 py-1.5 text-xs border border-rule bg-paper text-ink focus:outline-none focus:border-ink">
       </div>
       <button type="submit"
@@ -60,25 +60,21 @@
     </form>
   </div>
 
-  <!-- Indicadores objetivos da equipe -->
-  <div class="grid grid-cols-1 sm:grid-cols-3 border-t border-l border-rule bg-white">
+  <!-- Resumo da equipe -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 border-t border-l border-rule bg-white">
     <div class="border-r border-b border-rule p-3.5">
       <div class="micro">{% if modo_todos %}Ativos em {{ ANOS_DISPONIVEIS|max }}{% else %}Ativos no Gabinete{% endif %}</div>
       <div class="num text-2xl font-semibold text-civic mt-1">{{ pessoal.ativos }}</div>
     </div>
     <div class="border-r border-b border-rule p-3.5">
       <div class="micro">{% if modo_todos %}Exonerados / Saíram ({{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}){% else %}Exonerados / Saíram em {{ ano }}{% endif %}</div>
-      <div class="num text-2xl font-semibold {% if pessoal.exonerados >= 10 %}text-ochre{% else %}text-ink{% endif %} mt-1">{{ pessoal.exonerados }}</div>
-    </div>
-    <div class="border-r border-b border-rule p-3.5">
-      <div class="micro">Mesmo Sobrenome do Deputado</div>
-      <div class="num text-2xl font-semibold {% if pessoal.mesmo_sobrenome_qtd > 0 %}text-signal{% else %}text-ink{% endif %} mt-1">{{ pessoal.mesmo_sobrenome_qtd }}</div>
+      <div class="num text-2xl font-semibold text-ink mt-1">{{ pessoal.exonerados }}</div>
     </div>
   </div>
 
   <div class="flex flex-wrap items-center justify-between gap-2 bg-paper border-l-2 border-ink border-y border-r border-rule p-3.5 text-xs text-muted">
     <span>
-      <strong class="text-ink">Nota de verificação:</strong> clique em <em>Gráfico salarial</em> ou no nome para consultar o contracheque oficial mês a mês. A marcação <em>Mesmo sobrenome</em> indica apenas coincidência textual com o nome civil do parlamentar — não comprova parentesco nem ilegalidade.
+      <strong class="text-ink">Fonte oficial:</strong> listagem pública de cargos e períodos de exercício no gabinete. Para consultar a remuneração individual, utilize diretamente o link para o Portal da Câmara.
     </span>
     <div class="flex flex-wrap gap-2 shrink-0">
       <a href="https://www.camara.leg.br/deputados/{{ dep_id }}/pessoal-gabinete?ano={{ ANOS_DISPONIVEIS|max if modo_todos else ano }}" target="_blank"
@@ -94,17 +90,17 @@
 
   {% if not funcionarios %}
     {% if busca %}
-    <div class="bg-red-50/70 border-l-4 border-signal border-y border-r border-rule p-5 text-xs">
-      <div class="font-bold text-signal uppercase font-mono tracking-[0.06em]">
-        Nenhum vínculo localizado {% if modo_todos %}em {{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}{% else %}em {{ ano }}{% endif %}
+    <div class="bg-paper border-l-2 border-ink border-y border-r border-rule p-5 text-xs">
+      <div class="font-bold text-ink uppercase font-mono tracking-[0.06em]">
+        Nenhum registro encontrado {% if modo_todos %}em {{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}{% else %}em {{ ano }}{% endif %}
       </div>
-      <p class="text-ink mt-1.5 leading-relaxed">
-        Não foi encontrado nenhum funcionário (ativo ou exonerado) com o termo <strong>"{{ busca }}"</strong>
+      <p class="text-muted mt-1.5 leading-relaxed">
+        Não foi encontrado registro com o termo <strong class="text-ink">"{{ busca }}"</strong>
         no portal oficial de Pessoal de Gabinete deste parlamentar
         {% if modo_todos %}
-          em nenhum ano da 57ª Legislatura (<strong>{{ ANOS_DISPONIVEIS|min }} a {{ ANOS_DISPONIVEIS|max }}</strong>, entre {{ pessoal.get('total_sem_filtro', 0) }} nomes consultados).
+          entre <strong class="text-ink">{{ ANOS_DISPONIVEIS|min }} e {{ ANOS_DISPONIVEIS|max }}</strong> ({{ pessoal.get('total_sem_filtro', 0) }} nomes consultados).
         {% else %}
-          em <strong>{{ ano }}</strong>.
+          em <strong class="text-ink">{{ ano }}</strong>.
         {% endif %}
       </p>
       {% if not modo_todos %}
@@ -112,7 +108,7 @@
               hx-target="#tab-conteudo"
               hx-indicator="#tab-loading"
               class="mt-2.5 px-3 py-1.5 bg-ink hover:bg-signal text-paper font-mono text-[11px] uppercase">
-        Verificar em todos os anos ({{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}) →
+        Buscar em todos os anos ({{ ANOS_DISPONIVEIS|min }}–{{ ANOS_DISPONIVEIS|max }}) →
       </button>
       {% endif %}
     </div>
@@ -131,26 +127,14 @@
           {% if modo_todos %}<th class="py-2.5 px-2">Anos</th>{% endif %}
           <th class="py-2.5 px-2">Cargo / Nível</th>
           <th class="py-2.5 px-2">Período de Exercício</th>
-          <th class="py-2.5 px-2 text-right">Contracheque</th>
+          <th class="py-2.5 px-2 text-right">Portal Oficial</th>
         </tr>
       </thead>
       <tbody class="divide-y divide-rule text-ink">
         {% for f in funcionarios %}
         <tr class="hover:bg-paper/70">
           <td class="py-2 px-2">
-            {% if f.get('codigo_remuneracao') %}
-            <a href="/ui/funcionario/{{ f.codigo_remuneracao }}?nome={{ f.nome|urlencode }}&cargo={{ (f.cargo or '')|urlencode }}&dep_id={{ dep_id }}"
-               class="font-semibold text-ink hover:text-signal underline underline-offset-2 transition-colors">
-              {{ f.nome }}
-            </a>
-            {% else %}
             <span class="font-semibold">{{ f.nome }}</span>
-            {% endif %}
-            {% if f.mesmo_sobrenome %}
-            <span class="ml-1.5 px-1.5 py-0.5 bg-red-50 border border-signal text-signal font-mono text-[10px] uppercase">
-              Mesmo sobrenome ({{ f.sobrenomes_comuns|join(', ') }})
-            </span>
-            {% endif %}
             <div class="text-[11px] text-muted">{{ f.grupo }}</div>
           </td>
           <td class="py-2 px-2 whitespace-nowrap">
@@ -169,16 +153,10 @@
           {% endif %}
           <td class="py-2 px-2"><span class="px-2 py-0.5 bg-paper border border-rule font-mono text-[11px]">{{ f.cargo or '—' }}</span></td>
           <td class="py-2 px-2 num text-muted whitespace-nowrap">{{ f.periodo or '—' }}</td>
-          <td class="py-2 px-2 text-right whitespace-nowrap font-mono space-x-2">
-            {% if f.get('codigo_remuneracao') %}
-            <a href="/ui/funcionario/{{ f.codigo_remuneracao }}?nome={{ f.nome|urlencode }}&cargo={{ (f.cargo or '')|urlencode }}&dep_id={{ dep_id }}"
-               class="px-2 py-1 bg-ink text-paper hover:bg-signal text-[10px] uppercase tracking-[0.05em] transition-colors">
-              Gráfico salarial
-            </a>
-            {% endif %}
+          <td class="py-2 px-2 text-right whitespace-nowrap font-mono">
             {% if f.url_remuneracao %}
             <a href="{{ f.url_remuneracao }}" target="_blank" class="text-cobalt underline underline-offset-2 hover:text-signal text-[11px]">
-              Portal ↗
+              Portal da Câmara ↗
             </a>
             {% else %}—{% endif %}
           </td>

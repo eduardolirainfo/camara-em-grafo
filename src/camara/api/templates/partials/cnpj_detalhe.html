@@ -1,23 +1,21 @@
 {% if dados.get('erro') %}
 <div class="mt-2.5 bg-paper border border-rule p-3 text-xs text-muted">{{ dados.erro }}</div>
 {% else %}
-<div class="mt-2.5 bg-paper border-l-2 {% if dados.situacao_irregular or dados.alerta_sobrenome or dados.recem_aberta %}border-signal{% else %}border-ink{% endif %} border-y border-r border-rule p-3.5 text-xs space-y-2.5">
+<div class="mt-2.5 bg-paper border-l-2 border-ink border-y border-r border-rule p-3.5 text-xs space-y-2.5">
   <div class="flex flex-wrap items-center justify-between gap-2">
-    <div class="flex flex-wrap items-center gap-1.5">
-      <span class="px-1.5 py-0.5 font-mono text-[10px] uppercase font-semibold {% if dados.situacao_irregular %}bg-signal text-white{% else %}bg-civic text-white{% endif %}">
+    <div class="flex flex-wrap items-center gap-2">
+      <span class="px-1.5 py-0.5 font-mono text-[10px] uppercase font-semibold {% if dados.situacao_irregular %}bg-tint border border-rule text-ink{% else %}bg-civic text-white{% endif %}">
         {{ dados.situacao }}
       </span>
-      {% if dados.recem_aberta %}
-      <span class="px-1.5 py-0.5 bg-red-50 border border-signal text-signal font-mono text-[10px] font-semibold uppercase">
-        Aberta na 57ª Leg. ({{ dados.data_abertura|data_br }})
+      <span class="font-mono text-[11px] text-muted">
+        Abertura: <strong class="text-ink">{{ dados.data_abertura|data_br if dados.data_abertura else '—' }}</strong>
       </span>
-      {% else %}
-      <span class="font-mono text-[11px] text-muted">Abertura: <strong class="text-ink">{{ dados.data_abertura|data_br }}</strong></span>
-      {% endif %}
     </div>
+    {% if dados.get('capital_social') %}
     <span class="font-mono text-[11px] text-muted">
       Capital Social: <strong class="text-ink num">{{ dados.capital_social|brl }}</strong>
     </span>
+    {% endif %}
   </div>
 
   <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
@@ -26,33 +24,9 @@
       <span class="text-ink">{{ dados.cnae }}</span>
     </div>
     <div>
-      <span class="micro block">Localização / Porte</span>
-      <span class="text-ink">{{ dados.municipio }}/{{ dados.uf }} · {{ dados.porte }}</span>
+      <span class="micro block">Município / Porte</span>
+      <span class="text-ink">{{ dados.municipio }}/{{ dados.uf }}{% if dados.porte and dados.porte != '—' %} · {{ dados.porte }}{% endif %}</span>
     </div>
   </div>
-
-  {% if dados.socios %}
-  <div class="pt-2 border-t border-rule">
-    <span class="micro block mb-1">Quadro Societário (Receita Federal)</span>
-    <div class="flex flex-wrap gap-1.5">
-      {% for s in dados.socios %}
-      <span class="px-2 py-0.5 border text-[11px] {% if s.mesmo_sobrenome %}bg-red-50 border-signal text-signal font-semibold{% else %}bg-white border-rule text-ink{% endif %}">
-        {{ s.nome }}
-        {% if s.qualificacao %}<span class="text-muted font-normal">({{ s.qualificacao }})</span>{% endif %}
-        {% if s.mesmo_sobrenome %}
-        <span class="font-mono text-[9px] uppercase ml-1">· Mesmo sobrenome ({{ s.sobrenomes_comuns|join(', ') }})</span>
-        {% endif %}
-      </span>
-      {% endfor %}
-    </div>
-    {% if dados.alerta_sobrenome %}
-    <p class="text-[10px] text-muted mt-1.5">
-      Nota: coincidência textual de sobrenome com deputado pagador — não comprova parentesco nem ilegalidade.
-    </p>
-    {% endif %}
-  </div>
-  {% else %}
-  <div class="text-[11px] text-muted">Empresário Individual / MEI ou sem sócios listados no QSA público.</div>
-  {% endif %}
 </div>
 {% endif %}

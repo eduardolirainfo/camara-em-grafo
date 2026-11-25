@@ -279,11 +279,11 @@
             <div class="min-w-0">
               <div class="text-ink truncate">{{ f.fornecedor }}</div>
               {% if f.get('cnpj') %}
-              <button hx-get="/ui/partials/cnpj/{{ f.cnpj }}?dep_id={{ dep_id }}"
+              <button hx-get="/ui/partials/cnpj/{{ f.cnpj }}"
                       hx-target="#dep-cnpj-{{ f.cnpj }}-{{ loop.index }}"
                       hx-swap="innerHTML"
                       class="font-mono text-[10px] text-cobalt underline underline-offset-2 hover:text-signal">
-                CNPJ {{ f.cnpj }} · Ver sócios na Receita ↻
+                CNPJ {{ f.cnpj }} · Dados na Receita ↻
               </button>
               {% endif %}
             </div>

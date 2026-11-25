@@ -223,11 +223,6 @@ _CONECTORES_NOME = {
     "DA", "DE", "DO", "DOS", "DAS", "E", "FILHO", "FILHA",
     "NETO", "NETA", "JUNIOR", "SOBRINHO", "SOBRINHA", "SEGUNDO", "TERCEIRO",
 }
-_SOBRENOMES_MUITO_COMUNS = {
-    "SILVA", "SANTOS", "OLIVEIRA", "SOUZA", "SOUSA", "PEREIRA", "COSTA",
-    "RODRIGUES", "ALMEIDA", "LIMA", "FERREIRA", "ALVES", "GOMES", "RIBEIRO",
-    "MARTINS", "ARAUJO", "NASCIMENTO", "CARVALHO",
-}
 
 
 def _normalizar_texto_nome(texto: str) -> str:
@@ -280,19 +275,8 @@ def _classificar_passageiro(
     return "externo"
 
 
-def _extrair_sobrenomes_relevantes(nome: str) -> set[str]:
-    tokens = _normalizar_texto_nome(nome).split()
-    if len(tokens) <= 1:
-        return set()
-    return {
-        t
-        for t in tokens[1:]
-        if len(t) >= 4 and t not in _CONECTORES_NOME and t not in _SOBRENOMES_MUITO_COMUNS
-    }
-
-
 def _parsear_pessoal_gabinete_html(html_text: str) -> list[dict[str, Any]]:
-    """Extrai funcionários (ativos e exonerados) e links individuais de remuneração do HTML da Câmara."""
+    """Extrai funcionários (ativos e exonerados) e links para o portal oficial da Câmara."""
     linhas = re.findall(r"<tr[^>]*>(.*?)</tr>", html_text, flags=re.DOTALL | re.IGNORECASE)
     resultado: list[dict[str, Any]] = []
     for linha in linhas:
@@ -313,7 +297,6 @@ def _parsear_pessoal_gabinete_html(html_text: str) -> list[dict[str, Any]]:
         url_rem = href_match.group(1) if href_match else ""
         if url_rem.startswith("/"):
             url_rem = f"https://www.camara.leg.br{url_rem}"
-        codigo_rem = url_rem.rstrip("/").split("/")[-1] if "remuneracao/" in url_rem else ""
         ativo = periodo.lower().startswith("desde ") and " a " not in periodo.lower()
         resultado.append(
             {
@@ -323,73 +306,9 @@ def _parsear_pessoal_gabinete_html(html_text: str) -> list[dict[str, Any]]:
                 "periodo": periodo,
                 "ativo": ativo,
                 "url_remuneracao": url_rem,
-                "codigo_remuneracao": codigo_rem,
             }
         )
     return resultado
-
-
-def _brl_para_float(texto: str) -> float:
-    limpo = re.sub(r"[^0-9,\-]", "", texto or "").strip()
-    if not limpo:
-        return 0.0
-    try:
-        return float(limpo.replace(".", "").replace(",", "."))
-    except ValueError:
-        return 0.0
-
-
-def _parsear_remuneracao_html(html_text: str) -> dict[str, float]:
-    """Extrai valores mensais de remuneração da página oficial da Câmara."""
-    tabelas = re.findall(r"<table[^>]*>(.*?)</table>", html_text, flags=re.DOTALL | re.IGNORECASE)
-    if not tabelas:
-        return {
-            "bruto": 0.0,
-            "cargo_comissao": 0.0,
-            "eventuais": 0.0,
-            "descontos": 0.0,
-            "liquido": 0.0,
-            "auxilios": 0.0,
-            "total_recebido": 0.0,
-        }
-    fixa = 0.0
-    cargo = 0.0
-    eventuais = 0.0
-    descontos = 0.0
-    liquido = 0.0
-    auxilios = 0.0
-    for tr in re.findall(r"<tr[^>]*>(.*?)</tr>", tabelas[0], flags=re.DOTALL | re.IGNORECASE):
-        tds = [
-            re.sub(r"\s+", " ", html_lib.unescape(re.sub(r"<[^>]+>", " ", td))).strip()
-            for td in re.findall(r"<t[dh][^>]*>(.*?)</t[dh]>", tr, flags=re.DOTALL | re.IGNORECASE)
-        ]
-        if len(tds) < 2:
-            continue
-        rotulo = tds[0].lower()
-        val = _brl_para_float(tds[1])
-        if "remuneração fixa" in rotulo or "vantagens de natureza pessoal" in rotulo or "abono perman" in rotulo:
-            fixa += val
-        elif "função ou cargo em comissão" in rotulo:
-            cargo += val
-        elif "gratificação natalina" in rotulo or "férias" in rotulo or "outras remunerações" in rotulo:
-            eventuais += val
-        elif "redutor constitucional" in rotulo or "contribuição previdenciária" in rotulo or "imposto de renda" in rotulo:
-            descontos += val
-        elif "remuneração após descontos" in rotulo:
-            liquido = val
-        elif "diárias" in rotulo or "auxílios" in rotulo or "vantagens indenizatórias" in rotulo:
-            auxilios += val
-
-    bruto = round(fixa + cargo + eventuais, 2)
-    return {
-        "bruto": bruto,
-        "cargo_comissao": round(cargo + fixa, 2),
-        "eventuais": round(eventuais, 2),
-        "descontos": round(descontos, 2),
-        "liquido": round(liquido, 2),
-        "auxilios": round(auxilios, 2),
-        "total_recebido": round(liquido + auxilios, 2),
-    }
 
 
 def _valor_liquido_despesa(item: dict[str, Any]) -> float:
@@ -762,11 +681,10 @@ class FichaDeputadoService:
         self,
         dep_id: int,
         ano: int,
-        nome_civil: str | None = None,
         busca: str | None = None,
     ) -> dict[str, Any]:
         """Consulta a página oficial de pessoal de gabinete da Câmara (ativos + exonerados no ano)
-        com link direto para o contracheque individual e sinalização factual de mesmo sobrenome."""
+        com link para o portal oficial de remuneração."""
         cache_path = self.cache_dir / "ficha_api" / f"pessoal_gabinete_{dep_id}_{ano}.json"
         registros: list[dict[str, Any]] | None = None
         if cache_path.exists() and cache_path.stat().st_size > 0:
@@ -806,68 +724,50 @@ class FichaDeputadoService:
                     for f in csv_funcs
                 ]
 
-        sobrenomes_dep = _extrair_sobrenomes_relevantes(nome_civil or "")
-        enriquecidos: list[dict[str, Any]] = []
-        ativos = 0
-        exonerados = 0
-        mesmo_sobrenome_qtd = 0
+        itens: list[dict[str, Any]] = []
         for r in registros:
-            sobrenomes_func = _extrair_sobrenomes_relevantes(r.get("nome", ""))
-            coinc = sorted(sobrenomes_dep & sobrenomes_func) if sobrenomes_dep else []
-            tem_coinc = bool(coinc)
-            if r.get("ativo", True):
-                ativos += 1
-            else:
-                exonerados += 1
-            if tem_coinc:
-                mesmo_sobrenome_qtd += 1
-            url_r = str(r.get("url_remuneracao") or "")
-            cod_r = r.get("codigo_remuneracao") or (
-                url_r.rstrip("/").split("/")[-1] if "remuneracao/" in url_r else ""
-            )
-            enriquecidos.append(
+            itens.append(
                 {
-                    **r,
-                    "codigo_remuneracao": cod_r,
-                    "mesmo_sobrenome": tem_coinc,
-                    "sobrenomes_comuns": coinc,
+                    "nome": str(r.get("nome") or "").strip(),
+                    "grupo": str(r.get("grupo") or "").strip(),
+                    "cargo": str(r.get("cargo") or "").strip(),
+                    "periodo": str(r.get("periodo") or "").strip(),
+                    "ativo": bool(r.get("ativo", True)),
+                    "url_remuneracao": str(r.get("url_remuneracao") or "").strip(),
                 }
             )
 
-        enriquecidos.sort(key=lambda x: (not x.get("ativo", True), not x["mesmo_sobrenome"], x["nome"]))
-        total_sem_filtro = len(enriquecidos)
+        itens.sort(key=lambda x: (not x.get("ativo", True), x["nome"]))
+        total_sem_filtro = len(itens)
         termo = _normalizar_texto_nome(busca or "")
         if termo:
             tokens_busca = [t for t in termo.split() if t]
-            enriquecidos = [
+            itens = [
                 it
-                for it in enriquecidos
+                for it in itens
                 if all(t in _normalizar_texto_nome(str(it.get("nome") or "")) for t in tokens_busca)
             ]
-            ativos = sum(1 for x in enriquecidos if x.get("ativo", True))
-            exonerados = len(enriquecidos) - ativos
-            mesmo_sobrenome_qtd = sum(1 for x in enriquecidos if x.get("mesmo_sobrenome"))
+        ativos = sum(1 for x in itens if x.get("ativo", True))
+        exonerados = len(itens) - ativos
         return {
             "ano": ano,
             "ativos": ativos,
             "exonerados": exonerados,
-            "total": len(enriquecidos),
+            "total": len(itens),
             "total_sem_filtro": total_sem_filtro,
-            "mesmo_sobrenome_qtd": mesmo_sobrenome_qtd,
-            "itens": enriquecidos,
+            "itens": itens,
         }
 
     async def obter_pessoal_gabinete_todos_anos(
         self,
         dep_id: int,
         anos: list[int],
-        nome_civil: str | None = None,
         busca: str | None = None,
     ) -> dict[str, Any]:
         """Consolida pessoal de gabinete (ativos e exonerados) em todos os anos da legislatura."""
         anos_ord = sorted(set(anos), reverse=True)
         resultados = await asyncio.gather(
-            *[self.obter_pessoal_gabinete(dep_id, ano=y, nome_civil=nome_civil) for y in anos_ord],
+            *[self.obter_pessoal_gabinete(dep_id, ano=y) for y in anos_ord],
             return_exceptions=True,
         )
 
@@ -880,7 +780,7 @@ class FichaDeputadoService:
                 nome = str(item.get("nome") or "").strip()
                 if not nome:
                     continue
-                chave = str(item.get("codigo_remuneracao") or "").strip() or _normalizar_texto_nome(nome)
+                chave = _normalizar_texto_nome(nome)
                 if chave not in por_pessoa:
                     por_pessoa[chave] = {
                         **item,
@@ -895,8 +795,6 @@ class FichaDeputadoService:
                     per = str(item.get("periodo") or "").strip()
                     if per and per not in atual["periodos"]:
                         atual["periodos"].append(per)
-                    if not atual.get("codigo_remuneracao") and item.get("codigo_remuneracao"):
-                        atual["codigo_remuneracao"] = item["codigo_remuneracao"]
                     if not atual.get("url_remuneracao") and item.get("url_remuneracao"):
                         atual["url_remuneracao"] = item["url_remuneracao"]
                     if y == ano_mais_recente and item.get("ativo"):
@@ -911,17 +809,15 @@ class FichaDeputadoService:
         termo = _normalizar_texto_nome(busca or "")
         if termo:
             tokens_busca = [t for t in termo.split() if t]
-            filtrados: list[dict[str, Any]] = []
-            for it in itens:
-                nome_norm = _normalizar_texto_nome(str(it.get("nome") or ""))
-                if all(t in nome_norm for t in tokens_busca):
-                    filtrados.append(it)
-            itens = filtrados
+            itens = [
+                it
+                for it in itens
+                if all(t in _normalizar_texto_nome(str(it.get("nome") or "")) for t in tokens_busca)
+            ]
 
-        itens.sort(key=lambda x: (not x.get("ativo", False), not x.get("mesmo_sobrenome", False), x["nome"]))
+        itens.sort(key=lambda x: (not x.get("ativo", False), x["nome"]))
         ativos = sum(1 for x in itens if x.get("ativo"))
         exonerados = len(itens) - ativos
-        mesmo_sobrenome_qtd = sum(1 for x in itens if x.get("mesmo_sobrenome"))
         return {
             "ano": "todos",
             "anos_consultados": sorted(anos_ord),
@@ -929,107 +825,16 @@ class FichaDeputadoService:
             "exonerados": exonerados,
             "total": len(itens),
             "total_sem_filtro": total_sem_filtro,
-            "mesmo_sobrenome_qtd": mesmo_sobrenome_qtd,
             "itens": itens,
         }
 
-    async def obter_remuneracao_ano(self, codigo: str, ano: int) -> list[dict[str, Any]]:
-        """Busca e faz cache da remuneração mensal (1..12) de um funcionário na Câmara."""
-        cod_limpo = re.sub(r"[^A-Za-z0-9_-]", "", codigo)
-        if not cod_limpo:
-            return []
-        cache_path = self.cache_dir / "ficha_api" / f"remuneracao_{cod_limpo}_{ano}.json"
-        if cache_path.exists() and cache_path.stat().st_size > 0:
-            try:
-                return list(json.loads(cache_path.read_text(encoding="utf-8")))
-            except (OSError, ValueError):
-                pass
-
-        sem = asyncio.Semaphore(4)
-        siglas = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"]
-
-        async def _buscar_mes(client: httpx.AsyncClient, mes: int) -> dict[str, Any]:
-            url = f"https://www.camara.leg.br/transparencia/recursos-humanos/remuneracao/{cod_limpo}"
-            async with sem:
-                try:
-                    resp = await client.get(url, params={"ano": ano, "mes": mes})
-                    resp.raise_for_status()
-                    parsed = _parsear_remuneracao_html(resp.text)
-                except httpx.HTTPError:
-                    parsed = {
-                        "bruto": 0.0,
-                        "cargo_comissao": 0.0,
-                        "eventuais": 0.0,
-                        "descontos": 0.0,
-                        "liquido": 0.0,
-                        "auxilios": 0.0,
-                        "total_recebido": 0.0,
-                    }
-            return {
-                "ano": ano,
-                "mes": mes,
-                "rotulo": f"{siglas[mes - 1]}/{str(ano)[2:]}",
-                **parsed,
-            }
-
-        async with httpx.AsyncClient(
-            headers={"User-Agent": self.user_agent},
-            timeout=20.0,
-            follow_redirects=True,
-        ) as client:
-            meses = await asyncio.gather(*[_buscar_mes(client, m) for m in range(1, 13)])
-
-        meses_ord = sorted(meses, key=lambda x: x["mes"])
-        cache_path.parent.mkdir(parents=True, exist_ok=True)
-        cache_path.write_text(json.dumps(meses_ord, ensure_ascii=False), encoding="utf-8")
-        return meses_ord
-
-    async def obter_historico_remuneracao(
-        self, codigo: str, anos: list[int]
-    ) -> dict[str, Any]:
-        """Consolida remunerações de 1 ou mais anos para gráfico e tabela de evolução salarial."""
-        serie: list[dict[str, Any]] = []
-        for ano in sorted(anos):
-            serie.extend(await self.obter_remuneracao_ano(codigo, ano))
-
-        ativos = [m for m in serie if m["bruto"] > 0 or m["liquido"] > 0 or m["auxilios"] > 0]
-        total_bruto = round(sum(m["bruto"] for m in ativos), 2)
-        total_liquido = round(sum(m["liquido"] for m in ativos), 2)
-        total_auxilios = round(sum(m["auxilios"] for m in ativos), 2)
-        total_recebido = round(sum(m["total_recebido"] for m in ativos), 2)
-        media_bruto = round(total_bruto / len(ativos), 2) if ativos else 0.0
-
-        variacao_abs = 0.0
-        variacao_pct = 0.0
-        if len(ativos) >= 2 and ativos[0]["cargo_comissao"] > 0:
-            primeiro = ativos[0]["cargo_comissao"]
-            ultimo = ativos[-1]["cargo_comissao"]
-            variacao_abs = round(ultimo - primeiro, 2)
-            variacao_pct = round((variacao_abs / primeiro) * 100, 1)
-
-        return {
-            "serie": serie,
-            "meses_pagos": len(ativos),
-            "total_bruto": total_bruto,
-            "total_liquido": total_liquido,
-            "total_auxilios": total_auxilios,
-            "total_recebido": total_recebido,
-            "media_bruto": media_bruto,
-            "variacao_abs": variacao_abs,
-            "variacao_pct": variacao_pct,
-            "primeiro_mes": ativos[0]["rotulo"] if ativos else "—",
-            "ultimo_mes": ativos[-1]["rotulo"] if ativos else "—",
-        }
-
-    async def obter_dados_cnpj(
-        self, cnpj: str, nomes_deputados: list[str] | None = None
-    ) -> dict[str, Any]:
-        """Consulta dados públicos da Receita Federal via BrasilAPI (com cache em disco)
-        e cruza o quadro societário (QSA) com os sobrenomes dos deputados pagadores."""
+    async def obter_dados_cnpj(self, cnpj: str) -> dict[str, Any]:
+        """Consulta dados cadastrais públicos da empresa na Receita Federal via BrasilAPI
+        (sem exibir nem armazenar nomes de sócios pessoas físicas)."""
         digitos = re.sub(r"\D+", "", cnpj or "")
         if len(digitos) != 14:
             return {
-                "erro": "Registro de Pessoa Física (CPF) ou CNPJ incompleto — sem quadro societário na Receita Federal."
+                "erro": "Registro sem CNPJ de 14 dígitos — consulta cadastral indisponível."
             }
 
         cache_path = self.cache_dir / "ficha_api" / f"cnpj_{digitos}.json"
@@ -1051,31 +856,22 @@ class FichaDeputadoService:
                 if resp.status_code == 404:
                     return {"erro": f"CNPJ {digitos} não encontrado na base pública da Receita Federal."}
                 resp.raise_for_status()
-                bruto = dict(resp.json() or {})
+                resp_json = dict(resp.json() or {})
+            # Armazena exclusivamente dados cadastrais da pessoa jurídica (sem QSA / nomes de sócios)
+            bruto = {
+                "cnpj": digitos,
+                "razao_social": str(resp_json.get("razao_social") or "").strip(),
+                "nome_fantasia": str(resp_json.get("nome_fantasia") or "").strip(),
+                "descricao_situacao_cadastral": str(resp_json.get("descricao_situacao_cadastral") or "").strip(),
+                "data_inicio_atividade": str(resp_json.get("data_inicio_atividade") or "")[:10],
+                "capital_social": float(resp_json.get("capital_social") or 0.0),
+                "porte": str(resp_json.get("porte") or "").strip(),
+                "cnae_fiscal_descricao": str(resp_json.get("cnae_fiscal_descricao") or "").strip(),
+                "municipio": str(resp_json.get("municipio") or "").strip(),
+                "uf": str(resp_json.get("uf") or "").strip(),
+            }
             cache_path.parent.mkdir(parents=True, exist_ok=True)
             cache_path.write_text(json.dumps(bruto, ensure_ascii=False), encoding="utf-8")
-
-        sobrenomes_deps: set[str] = set()
-        for n in nomes_deputados or []:
-            sobrenomes_deps |= _extrair_sobrenomes_relevantes(n)
-
-        socios: list[dict[str, Any]] = []
-        alerta_sobrenome = False
-        for s in bruto.get("qsa") or []:
-            nome_s = str(s.get("nome_socio") or "").strip()
-            if not nome_s:
-                continue
-            coinc = sorted(sobrenomes_deps & _extrair_sobrenomes_relevantes(nome_s)) if sobrenomes_deps else []
-            if coinc:
-                alerta_sobrenome = True
-            socios.append(
-                {
-                    "nome": nome_s,
-                    "qualificacao": str(s.get("qualificacao_socio") or "").strip(),
-                    "mesmo_sobrenome": bool(coinc),
-                    "sobrenomes_comuns": coinc,
-                }
-            )
 
         situacao = str(bruto.get("descricao_situacao_cadastral") or "—").strip().upper()
         abertura = str(bruto.get("data_inicio_atividade") or "")[:10]
@@ -1086,14 +882,11 @@ class FichaDeputadoService:
             "situacao": situacao,
             "situacao_irregular": situacao not in {"ATIVA", "—", ""},
             "data_abertura": abertura,
-            "recem_aberta": bool(abertura and abertura >= "2023-01-01"),
             "capital_social": float(bruto.get("capital_social") or 0.0),
             "porte": str(bruto.get("porte") or "—").strip(),
             "cnae": str(bruto.get("cnae_fiscal_descricao") or "—").strip(),
             "municipio": str(bruto.get("municipio") or "").strip(),
             "uf": str(bruto.get("uf") or "").strip(),
-            "socios": socios,
-            "alerta_sobrenome": alerta_sobrenome,
             "erro": None,
         }
 

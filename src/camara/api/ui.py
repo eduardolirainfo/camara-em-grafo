@@ -262,28 +262,9 @@ def criar_ui_router(
     async def partial_cnpj_receita(
         request: Request,
         cnpj: str,
-        dep_id: int | None = None,
     ) -> HTMLResponse:
-        nomes_deps: list[str] = []
-        if dep_id is not None:
-            dep = await obter_repo().buscar_ficha_grafo(dep_id)
-            if dep and dep.get("nome"):
-                nomes_deps.append(str(dep["nome"]))
-            try:
-                det = await ficha_service.obter_detalhes_api(dep_id)
-                if det.get("nomeCivil"):
-                    nomes_deps.append(str(det["nomeCivil"]))
-            except _API_ERROS:
-                pass
-        else:
-            forns = await obter_repo().buscar_fornecedores_ui(busca=cnpj, limit=1)
-            if forns:
-                for d in forns[0].get("topDeputados") or []:
-                    if d.get("nome"):
-                        nomes_deps.append(str(d["nome"]))
-
         try:
-            dados = await ficha_service.obter_dados_cnpj(cnpj, nomes_deputados=nomes_deps)
+            dados = await ficha_service.obter_dados_cnpj(cnpj)
         except _API_ERROS:
             dados = {
                 "erro": "Falha temporária ao consultar a Receita Federal (BrasilAPI). Tente novamente em instantes."
@@ -311,7 +292,6 @@ def criar_ui_router(
         pessoal_atual = await ficha_service.obter_pessoal_gabinete(
             dep_id,
             ano=anos_ordenados[0],
-            nome_civil=str(detalhes.get("nomeCivil") or ""),
         )
         aliancas = await repo.buscar_aliancas_deputado(dep_id)
         mapa_grupos = await _mapa_grupos(repo)
@@ -399,25 +379,18 @@ def criar_ui_router(
     ) -> HTMLResponse:
         busca_limpa = (busca or "").strip()
         modo_todos = (ano or "").strip().lower() == "todos"
-        nome_civil = ""
-        try:
-            det = await ficha_service.obter_detalhes_api(dep_id)
-            nome_civil = str(det.get("nomeCivil") or "")
-        except _API_ERROS:
-            pass
 
         if modo_todos:
             pessoal = await ficha_service.obter_pessoal_gabinete_todos_anos(
                 dep_id,
                 anos=anos_ordenados,
-                nome_civil=nome_civil,
                 busca=busca_limpa,
             )
             ano_ctx: int | str = "todos"
         else:
             ano_sel = int(ano) if ano and ano.strip().isdigit() else anos_ordenados[0]
             pessoal = await ficha_service.obter_pessoal_gabinete(
-                dep_id, ano=ano_sel, nome_civil=nome_civil, busca=busca_limpa
+                dep_id, ano=ano_sel, busca=busca_limpa
             )
             ano_ctx = ano_sel
 
@@ -499,58 +472,6 @@ def criar_ui_router(
             request=request,
             name="partials/tab_carreira.html",
             context={"carreira": carreira, "dep_id": dep_id, "erro": erro},
-        )
-
-    @router.get("/funcionario/{codigo}", response_class=HTMLResponse)
-    async def pagina_funcionario(
-        request: Request,
-        codigo: str,
-        nome: str = "Funcionário de Gabinete",
-        cargo: str = "",
-        dep_id: int | None = None,
-        ano: str = "todos",
-    ) -> HTMLResponse:
-        dep_nome = ""
-        if dep_id is not None:
-            dep = await obter_repo().buscar_ficha_grafo(dep_id)
-            if dep:
-                dep_nome = str(dep.get("nome") or "")
-        anos_consulta = (
-            [int(ano)] if ano.isdigit() and int(ano) in anos_ordenados else sorted(anos_ordenados)
-        )
-        historico = await ficha_service.obter_historico_remuneracao(codigo, anos_consulta)
-        return templates.TemplateResponse(
-            request=request,
-            name="funcionario.html",
-            context={
-                "codigo": codigo,
-                "nome": nome,
-                "cargo": cargo,
-                "dep_id": dep_id,
-                "dep_nome": dep_nome,
-                "ano_selecionado": ano,
-                "historico": historico,
-            },
-        )
-
-    @router.get("/funcionario/{codigo}/dados", response_class=HTMLResponse)
-    async def partial_funcionario_salarios(
-        request: Request,
-        codigo: str,
-        ano: str = "todos",
-    ) -> HTMLResponse:
-        anos_consulta = (
-            [int(ano)] if ano.isdigit() and int(ano) in anos_ordenados else sorted(anos_ordenados)
-        )
-        historico = await ficha_service.obter_historico_remuneracao(codigo, anos_consulta)
-        return templates.TemplateResponse(
-            request=request,
-            name="partials/funcionario_salarios.html",
-            context={
-                "codigo": codigo,
-                "ano_selecionado": ano,
-                "historico": historico,
-            },
         )
 
     return router
