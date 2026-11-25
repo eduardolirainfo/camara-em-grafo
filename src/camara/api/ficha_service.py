@@ -466,14 +466,13 @@ class FichaDeputadoService:
             valor = _valor_liquido_despesa(d)
             cod_doc = str(d.get("codDocumento") or "").strip()
             num_doc = str(d.get("numDocumento") or "").strip()
-            trecho, passageiro = mapa_doc.get(
+            trecho, _passageiro = mapa_doc.get(
                 cod_doc, mapa_doc.get(f"num:{dep_id}:{num_doc}", ("", ""))
             )
             item_norm = {
                 **d,
                 "valorLiquido": valor,
                 "trecho": trecho,
-                "passageiro": passageiro,
             }
             itens_normalizados.append(item_norm)
             m = int(d.get("mes") or 0)
@@ -532,15 +531,10 @@ class FichaDeputadoService:
 
         por_trecho_qtd: dict[str, int] = defaultdict(int)
         por_trecho_val: dict[str, float] = defaultdict(float)
-        por_pass_qtd: dict[str, int] = defaultdict(int)
-        por_pass_val: dict[str, float] = defaultdict(float)
         for v in voos_dep:
             if v["trecho"]:
                 por_trecho_qtd[v["trecho"]] += 1
                 por_trecho_val[v["trecho"]] += v["valor"]
-            if v["passageiro"]:
-                por_pass_qtd[v["passageiro"]] += 1
-                por_pass_val[v["passageiro"]] += v["valor"]
 
         top_trechos = sorted(
             [
@@ -550,62 +544,37 @@ class FichaDeputadoService:
             key=lambda x: (x["voos"], x["valor"]),
             reverse=True,
         )[:12]
-        top_passageiros = sorted(
-            [
-                {"passageiro": k, "voos": por_pass_qtd[k], "valor": round(por_pass_val[k], 2)}
-                for k in por_pass_qtd
-            ],
-            key=lambda x: (x["voos"], x["valor"]),
-            reverse=True,
-        )[:10]
 
-        # Cruzamento por ano: passageiro vs. parlamentar + pessoal de gabinete daquele mesmo ano
+        # Resumo agregado de passagens no ano (sem expor nomes de terceiros)
         nomes_dep = [n for n in (nomes_parlamentar or []) if n]
-        anos_check = sorted(set(anos_verificacao or [2023, 2024, 2025, 2026]), reverse=True)
-        for y in anos_check:
-            self._carregar_voos_ano(y)
-        anos_com_voos = [y for y in anos_check if self._voos_por_ano.get(y, {}).get(dep_id)]
+        equipe_ano_atual: list[str] = []
+        if voos_dep:
+            try:
+                p_res = await self.obter_pessoal_gabinete(dep_id, ano=ano)
+                equipe_ano_atual = [str(f.get("nome") or "") for f in p_res.get("itens") or []]
+            except Exception:
+                equipe_ano_atual = []
 
-        equipe_por_ano: dict[int, list[str]] = {}
-        if anos_com_voos:
-            pessoais = await asyncio.gather(
-                *[self.obter_pessoal_gabinete(dep_id, ano=y) for y in anos_com_voos],
-                return_exceptions=True,
-            )
-            for y, p_res in zip(anos_com_voos, pessoais, strict=False):
-                if isinstance(p_res, dict):
-                    equipe_por_ano[y] = [
-                        str(f.get("nome") or "") for f in p_res.get("itens") or []
-                    ]
+        tot_pass: dict[str, dict[str, Any]] = {
+            "parlamentar": {"bilhetes": 0, "valor": 0.0},
+            "equipe": {"bilhetes": 0, "valor": 0.0},
+            "outros": {"bilhetes": 0, "valor": 0.0},
+        }
+        for v in voos_dep:
+            p_nome = v.get("passageiro") or ""
+            if not p_nome:
+                continue
+            cat = _classificar_passageiro(p_nome, nomes_dep, equipe_ano_atual)
+            chave_cat = "outros" if cat == "externo" else cat
+            tot_pass[chave_cat]["bilhetes"] += 1
+            tot_pass[chave_cat]["valor"] += float(v.get("valor") or 0.0)
 
-        equipe_ano_atual = equipe_por_ano.get(ano, [])
-        for ps in top_passageiros:
-            ps["vinculo"] = _classificar_passageiro(
-                ps["passageiro"], nomes_dep, equipe_ano_atual
-            )
-
-        alertas_passageiros_anos: list[dict[str, Any]] = []
-        for y in anos_com_voos:
-            voos_y = self._voos_por_ano.get(y, {}).get(dep_id, [])
-            eq_y = equipe_por_ano.get(y, [])
-            externos_y: set[str] = set()
-            valor_ext = 0.0
-            for v in voos_y:
-                p_nome = v.get("passageiro") or ""
-                if not p_nome:
-                    continue
-                if _classificar_passageiro(p_nome, nomes_dep, eq_y) == "externo":
-                    externos_y.add(p_nome)
-                    valor_ext += float(v.get("valor") or 0.0)
-            if externos_y and valor_ext > 0:
-                alertas_passageiros_anos.append(
-                    {
-                        "ano": y,
-                        "quantidade": len(externos_y),
-                        "valor": round(valor_ext, 2),
-                        "exemplos": sorted(externos_y)[:3],
-                    }
-                )
+        for grupo in tot_pass.values():
+            grupo["valor"] = round(float(grupo["valor"]), 2)
+        resumo_passageiros = {
+            **tot_pass,
+            "total_bilhetes": sum(int(g["bilhetes"]) for g in tot_pass.values()),
+        }
 
         return {
             "ano": ano,
@@ -617,8 +586,7 @@ class FichaDeputadoService:
             "categorias": categorias,
             "top_fornecedores": top_fornecedores,
             "top_trechos": top_trechos,
-            "top_passageiros": top_passageiros,
-            "alertas_passageiros_anos": alertas_passageiros_anos,
+            "resumo_passageiros": resumo_passageiros,
             "total_voos_com_trecho": sum(por_trecho_qtd.values()),
             "itens": itens[:100],
         }
